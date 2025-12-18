@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 树干 -->
+  <rect x="26" y="52" width="12" height="10" fill="#8B4513" rx="1"/>
+  <rect x="27" y="53" width="3" height="8" fill="#A0522D" opacity="0.5"/>
+  
+  <!-- 树底层 -->
+  <polygon points="32,8 4,52 60,52" fill="#228B22"/>
+  <polygon points="32,8 4,52 32,52" fill="#2E8B2E"/>
+  
+  <!-- 树中层 -->
+  <polygon points="32,4 10,40 54,40" fill="#32CD32"/>
+  <polygon points="32,4 10,40 32,40" fill="#3CB371"/>
+  
+  <!-- 树顶层 -->
+  <polygon points="32,0 16,28 48,28" fill="#90EE90"/>
+  <polygon points="32,0 16,28 32,28" fill="#98FB98"/>
+  
+  <!-- 星星 -->
+  <polygon points="32,0 33.5,5 38,5 34.5,8 36,13 32,10 28,13 29.5,8 26,5 30.5,5" fill="#FFD700"/>
+  <polygon points="32,0 33.5,5 38,5 34.5,8 36,13 32,10 28,13 29.5,8 26,5 30.5,5" fill="#FFF8DC" opacity="0.4"/>
+  
+  <!-- 彩灯装饰 -->
+  <circle cx="22" cy="35" r="2.5" fill="#FF0000"/>
+  <circle cx="22" cy="35" r="1" fill="#FF6666" opacity="0.6"/>
+  
+  <circle cx="42" cy="38" r="2.5" fill="#0000FF"/>
+  <circle cx="42" cy="38" r="1" fill="#6666FF" opacity="0.6"/>
+  
+  <circle cx="28" cy="45" r="2.5" fill="#FFD700"/>
+  <circle cx="28" cy="45" r="1" fill="#FFEC8B" opacity="0.6"/>
+  
+  <circle cx="38" cy="48" r="2.5" fill="#FF00FF"/>
+  <circle cx="38" cy="48" r="1" fill="#FF66FF" opacity="0.6"/>
+  
+  <circle cx="32" cy="25" r="2.5" fill="#00FFFF"/>
+  <circle cx="32" cy="25" r="1" fill="#66FFFF" opacity="0.6"/>
+  
+  <circle cx="25" cy="20" r="2" fill="#FF4500"/>
+  <circle cx="25" cy="20" r="0.8" fill="#FF7F50" opacity="0.6"/>
+  
+  <circle cx="39" cy="22" r="2" fill="#32CD32"/>
+  <circle cx="39" cy="22" r="0.8" fill="#90EE90" opacity="0.6"/>
+  
+  <circle cx="18" cy="45" r="2" fill="#FF1493"/>
+  <circle cx="18" cy="45" r="0.8" fill="#FF69B4" opacity="0.6"/>
+  
+  <circle cx="46" cy="46" r="2" fill="#00FF00"/>
+  <circle cx="46" cy="46" r="0.8" fill="#7FFF00" opacity="0.6"/>
+  
+  <!-- 雪花点缀 -->
+  <circle cx="15" cy="30" r="1" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="50" cy="32" r="1" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="35" cy="15" r="0.8" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="20" cy="50" r="1" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="45" cy="42" r="0.8" fill="#FFFFFF" opacity="0.8"/>
+  
+  <!-- 礼物盒 -->
+  <rect x="8" y="54" width="10" height="8" fill="#FF0000" rx="1"/>
+  <rect x="12" y="54" width="2" height="8" fill="#FFD700"/>
+  <rect x="8" y="57" width="10" height="2" fill="#FFD700"/>
+  
+  <rect x="48" y="56" width="8" height="6" fill="#4169E1" rx="1"/>
+  <rect x="51" y="56" width="2" height="6" fill="#FFD700"/>
+  <rect x="48" y="58" width="8" height="2" fill="#FFD700"/>
+</svg>

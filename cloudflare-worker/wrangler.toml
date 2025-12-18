@@ -1,0 +1,11 @@
+name = "r2-proxy"
+main = "r2-proxy.js"
+compatibility_date = "2024-01-01"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "merrychristmas"
+
+routes = [
+  { pattern = "r2-api.lynflows.com/*", zone_name = "lynflows.com" }
+]
