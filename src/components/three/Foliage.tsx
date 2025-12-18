@@ -1,11 +1,29 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame, extend } from '@react-three/fiber';
 import { shaderMaterial } from '@react-three/drei';
 import * as THREE from 'three';
-import * as random from 'maath/random';
 import { CONFIG } from '../../config';
 import { getTreePosition } from '../../utils/helpers';
 import type { SceneState, AnimationEasing, ScatterShape, GatherShape } from '../../types';
+
+// JavaScript 缓动函数（用于 chaos 位置过渡）
+const easingFunctionsJS: Record<AnimationEasing, (t: number) => number> = {
+  linear: (t) => t,
+  easeIn: (t) => t * t * t,
+  easeOut: (t) => 1 - Math.pow(1 - t, 3),
+  easeInOut: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  bounce: (t) => {
+    const n1 = 7.5625, d1 = 2.75;
+    if (t < 1 / d1) return n1 * t * t;
+    if (t < 2 / d1) { t -= 1.5 / d1; return n1 * t * t + 0.75; }
+    if (t < 2.5 / d1) { t -= 2.25 / d1; return n1 * t * t + 0.9375; }
+    t -= 2.625 / d1; return n1 * t * t + 0.984375;
+  },
+  elastic: (t) => {
+    if (t === 0 || t === 1) return t;
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
+  }
+};
 
 // 缓动函数 GLSL 代码
 const easingFunctions = {
@@ -92,17 +110,25 @@ interface FoliageProps {
   gatherShape?: GatherShape;
 }
 
-// 根据散开形状生成初始位置
+// 种子随机函数
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+// 根据散开形状生成初始位置（确定性，基于索引）
 const generateScatterPositions = (count: number, shape: ScatterShape): Float32Array => {
   const positions = new Float32Array(count * 3);
   
   switch (shape) {
     case 'explosion': {
-      // 爆炸式：从中心向外辐射
       for (let i = 0; i < count; i++) {
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const r = 15 + Math.random() * 20; // 距离中心 15-35
+        const r1 = seededRandom(i * 3 + 1);
+        const r2 = seededRandom(i * 3 + 2);
+        const r3 = seededRandom(i * 3 + 3);
+        const theta = r1 * Math.PI * 2;
+        const phi = Math.acos(2 * r2 - 1);
+        const r = 15 + r3 * 20;
         positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
         positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
         positions[i * 3 + 2] = r * Math.cos(phi);
@@ -110,12 +136,13 @@ const generateScatterPositions = (count: number, shape: ScatterShape): Float32Ar
       break;
     }
     case 'spiral': {
-      // 螺旋式：螺旋上升分布
       for (let i = 0; i < count; i++) {
+        const r1 = seededRandom(i * 3 + 1);
+        const r2 = seededRandom(i * 3 + 2);
         const t = i / count;
-        const angle = t * Math.PI * 12; // 6圈螺旋
-        const r = 5 + t * 20 + Math.random() * 3;
-        const y = -15 + t * 40 + (Math.random() - 0.5) * 5;
+        const angle = t * Math.PI * 12;
+        const r = 5 + t * 20 + r1 * 3;
+        const y = -15 + t * 40 + (r2 - 0.5) * 5;
         positions[i * 3] = r * Math.cos(angle);
         positions[i * 3 + 1] = y;
         positions[i * 3 + 2] = r * Math.sin(angle);
@@ -123,24 +150,25 @@ const generateScatterPositions = (count: number, shape: ScatterShape): Float32Ar
       break;
     }
     case 'rain': {
-      // 雨滴式：从上方飘落
       for (let i = 0; i < count; i++) {
-        const x = (Math.random() - 0.5) * 50;
-        const y = 20 + Math.random() * 30; // 在上方
-        const z = (Math.random() - 0.5) * 50;
-        positions[i * 3] = x;
-        positions[i * 3 + 1] = y;
-        positions[i * 3 + 2] = z;
+        const r1 = seededRandom(i * 3 + 1);
+        const r2 = seededRandom(i * 3 + 2);
+        const r3 = seededRandom(i * 3 + 3);
+        positions[i * 3] = (r1 - 0.5) * 50;
+        positions[i * 3 + 1] = 20 + r2 * 30;
+        positions[i * 3 + 2] = (r3 - 0.5) * 50;
       }
       break;
     }
     case 'ring': {
-      // 环形：环绕分布
       for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const r = 18 + Math.random() * 8; // 环半径 18-26
-        const y = (Math.random() - 0.5) * 10; // 垂直分布
-        const thickness = (Math.random() - 0.5) * 4; // 环厚度
+        const r1 = seededRandom(i * 3 + 1);
+        const r2 = seededRandom(i * 3 + 2);
+        const r3 = seededRandom(i * 3 + 3);
+        const angle = r1 * Math.PI * 2;
+        const r = 18 + r2 * 8;
+        const y = (r3 - 0.5) * 10;
+        const thickness = (r2 - 0.5) * 4;
         positions[i * 3] = (r + thickness) * Math.cos(angle);
         positions[i * 3 + 1] = y;
         positions[i * 3 + 2] = (r + thickness) * Math.sin(angle);
@@ -149,10 +177,17 @@ const generateScatterPositions = (count: number, shape: ScatterShape): Float32Ar
     }
     case 'sphere':
     default: {
-      // 球形：默认随机球形分布
-      const spherePoints = random.inSphere(new Float32Array(count * 3), { radius: 25 }) as Float32Array;
-      for (let i = 0; i < count * 3; i++) {
-        positions[i] = spherePoints[i];
+      // 使用种子随机生成球形分布
+      for (let i = 0; i < count; i++) {
+        const r1 = seededRandom(i * 3 + 1);
+        const r2 = seededRandom(i * 3 + 2);
+        const r3 = seededRandom(i * 3 + 3);
+        const theta = r1 * Math.PI * 2;
+        const phi = Math.acos(2 * r2 - 1);
+        const r = r3 * 25;
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = r * Math.cos(phi);
       }
       break;
     }
@@ -163,44 +198,49 @@ const generateScatterPositions = (count: number, shape: ScatterShape): Float32Ar
 
 export const Foliage = ({ state, easing = 'easeInOut', speed = 1, scatterShape = 'sphere', gatherShape = 'direct' }: FoliageProps) => {
   const materialRef = useRef<any>(null);
+  const geometryRef = useRef<THREE.BufferGeometry>(null);
+  const count = CONFIG.counts.foliage;
   
-  const { positions, targetPositions, randoms, gatherDelays } = useMemo(() => {
-    const count = CONFIG.counts.foliage;
-    const positions = generateScatterPositions(count, scatterShape);
+  // 存储当前和目标 chaos 位置（用于平滑过渡）
+  const currentChaosRef = useRef<Float32Array | null>(null);
+  const targetChaosRef = useRef<Float32Array | null>(null);
+  const chaosTransitionRef = useRef(1);
+  const prevScatterShapeRef = useRef(scatterShape);
+  
+  // 目标位置和其他数据（不依赖 scatterShape）
+  const { targetPositions, randoms, gatherDelays } = useMemo(() => {
     const targetPositions = new Float32Array(count * 3);
     const randoms = new Float32Array(count);
-    const gatherDelays = new Float32Array(count); // 聚合延迟
+    const gatherDelays = new Float32Array(count);
     
     for (let i = 0; i < count; i++) {
-      const [tx, ty, tz] = getTreePosition();
+      // 使用种子随机生成确定性的目标位置
+      const r1 = seededRandom(i * 5 + 100);
+      const r2 = seededRandom(i * 5 + 101);
+      const [tx, ty, tz] = getTreePosition(r1, r2);
       targetPositions[i * 3] = tx;
       targetPositions[i * 3 + 1] = ty;
       targetPositions[i * 3 + 2] = tz;
-      randoms[i] = Math.random();
+      randoms[i] = seededRandom(i * 5 + 102);
       
       // 根据聚合形状计算延迟
-      const normalizedY = (ty + CONFIG.tree.height / 2) / CONFIG.tree.height; // 0-1，底部到顶部
+      const normalizedY = (ty + CONFIG.tree.height / 2) / CONFIG.tree.height;
       switch (gatherShape) {
         case 'stack':
-          // 搭积木：从下往上，底部先到达
           gatherDelays[i] = normalizedY * 0.7;
           break;
         case 'spiralIn':
-          // 螺旋聚合：根据角度和高度
           const angle = Math.atan2(tz, tx);
           gatherDelays[i] = ((angle + Math.PI) / (2 * Math.PI) + normalizedY * 0.5) * 0.5;
           break;
         case 'implode':
-          // 向心收缩：外围先动，中心后动
           const dist = Math.sqrt(tx * tx + tz * tz) / CONFIG.tree.radius;
           gatherDelays[i] = (1 - dist) * 0.5;
           break;
         case 'waterfall':
-          // 瀑布：从上往下
           gatherDelays[i] = (1 - normalizedY) * 0.7;
           break;
         case 'wave':
-          // 波浪：从一侧扫到另一侧
           const normalizedX = (tx + CONFIG.tree.radius) / (2 * CONFIG.tree.radius);
           gatherDelays[i] = normalizedX * 0.6;
           break;
@@ -210,11 +250,39 @@ export const Foliage = ({ state, easing = 'easeInOut', speed = 1, scatterShape =
           break;
       }
     }
-    return { positions, targetPositions, randoms, gatherDelays };
-  }, [scatterShape, gatherShape]);
+    return { targetPositions, randoms, gatherDelays };
+  }, [count, gatherShape]);
+
+  // 初始化 chaos 位置
+  const positions = useMemo(() => {
+    const pos = generateScatterPositions(count, scatterShape);
+    if (!currentChaosRef.current) {
+      currentChaosRef.current = new Float32Array(pos);
+      targetChaosRef.current = new Float32Array(pos);
+    }
+    return pos;
+  }, [count, scatterShape]);
+
+  // 当 scatterShape 改变时，设置新的目标 chaos 位置
+  useEffect(() => {
+    if (prevScatterShapeRef.current !== scatterShape && currentChaosRef.current && targetChaosRef.current) {
+      // 将当前插值后的位置保存为新的起点
+      const easeFn = easingFunctionsJS[easing] || easingFunctionsJS.easeInOut;
+      const chaosT = easeFn(chaosTransitionRef.current);
+      for (let i = 0; i < count * 3; i++) {
+        currentChaosRef.current[i] = currentChaosRef.current[i] + (targetChaosRef.current[i] - currentChaosRef.current[i]) * chaosT;
+      }
+      // 设置新的目标位置
+      const newTargets = generateScatterPositions(count, scatterShape);
+      targetChaosRef.current = newTargets;
+      chaosTransitionRef.current = 0;
+      prevScatterShapeRef.current = scatterShape;
+    }
+  }, [scatterShape, count, easing]);
 
   // 动画持续时间（秒），speed 越大越快：0.3x -> 3.3秒, 1x -> 1秒, 3x -> 0.33秒
   const duration = 1 / Math.max(0.3, Math.min(3, speed));
+  const easeFnJS = easingFunctionsJS[easing] || easingFunctionsJS.easeInOut;
 
   useFrame((rootState, delta) => {
     if (materialRef.current) {
@@ -229,6 +297,21 @@ export const Foliage = ({ state, easing = 'easeInOut', speed = 1, scatterShape =
       } else if (targetProgress < currentProgress) {
         materialRef.current.uProgress = Math.max(targetProgress, currentProgress - step);
       }
+    }
+    
+    // 更新 chaos 位置过渡（散开形状切换时的平滑过渡）
+    if (chaosTransitionRef.current < 1 && geometryRef.current && currentChaosRef.current && targetChaosRef.current) {
+      const step = delta / duration;
+      chaosTransitionRef.current = Math.min(1, chaosTransitionRef.current + step);
+      const chaosT = easeFnJS(chaosTransitionRef.current);
+      
+      const positionAttr = geometryRef.current.getAttribute('position') as THREE.BufferAttribute;
+      const posArray = positionAttr.array as Float32Array;
+      
+      for (let i = 0; i < count * 3; i++) {
+        posArray[i] = currentChaosRef.current[i] + (targetChaosRef.current[i] - currentChaosRef.current[i]) * chaosT;
+      }
+      positionAttr.needsUpdate = true;
     }
   });
 
@@ -260,7 +343,7 @@ export const Foliage = ({ state, easing = 'easeInOut', speed = 1, scatterShape =
 
   return (
     <points>
-      <bufferGeometry>
+      <bufferGeometry ref={geometryRef}>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-aTargetPos" args={[targetPositions, 3]} />
         <bufferAttribute attach="attributes-aRandom" args={[randoms, 1]} />

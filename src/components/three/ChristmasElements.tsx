@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../../config';
@@ -23,13 +23,23 @@ const easingFunctions: Record<AnimationEasing, (t: number) => number> = {
   }
 };
 
-// 根据散开形状生成位置
-const generateScatterPosition = (shape: ScatterShape): THREE.Vector3 => {
+// 根据索引和形状生成确定性的散开位置（使用种子随机）
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+// 根据散开形状和索引生成位置（确定性，同一索引同一形状总是相同位置）
+const generateScatterPosition = (shape: ScatterShape, index: number): THREE.Vector3 => {
+  const r1 = seededRandom(index * 3 + 1);
+  const r2 = seededRandom(index * 3 + 2);
+  const r3 = seededRandom(index * 3 + 3);
+  
   switch (shape) {
     case 'explosion': {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 20 + Math.random() * 25;
+      const theta = r1 * Math.PI * 2;
+      const phi = Math.acos(2 * r2 - 1);
+      const r = 20 + r3 * 25;
       return new THREE.Vector3(
         r * Math.sin(phi) * Math.cos(theta),
         r * Math.sin(phi) * Math.sin(theta),
@@ -37,33 +47,45 @@ const generateScatterPosition = (shape: ScatterShape): THREE.Vector3 => {
       );
     }
     case 'spiral': {
-      const t = Math.random();
+      const t = r1;
       const angle = t * Math.PI * 12;
-      const r = 8 + t * 25 + Math.random() * 5;
-      const y = -20 + t * 50 + (Math.random() - 0.5) * 8;
-      return new THREE.Vector3(r * Math.cos(angle), y, r * Math.sin(angle));
+      const radius = 8 + t * 25 + r2 * 5;
+      const y = -20 + t * 50 + (r3 - 0.5) * 8;
+      return new THREE.Vector3(radius * Math.cos(angle), y, radius * Math.sin(angle));
     }
     case 'rain': {
       return new THREE.Vector3(
-        (Math.random() - 0.5) * 60,
-        25 + Math.random() * 35,
-        (Math.random() - 0.5) * 60
+        (r1 - 0.5) * 60,
+        25 + r2 * 35,
+        (r3 - 0.5) * 60
       );
     }
     case 'ring': {
-      const angle = Math.random() * Math.PI * 2;
-      const r = 22 + Math.random() * 10;
-      const y = (Math.random() - 0.5) * 15;
-      return new THREE.Vector3(r * Math.cos(angle), y, r * Math.sin(angle));
+      const angle = r1 * Math.PI * 2;
+      const radius = 22 + r2 * 10;
+      const y = (r3 - 0.5) * 15;
+      return new THREE.Vector3(radius * Math.cos(angle), y, radius * Math.sin(angle));
     }
     case 'sphere':
     default:
       return new THREE.Vector3(
-        (Math.random() - 0.5) * 60,
-        (Math.random() - 0.5) * 60,
-        (Math.random() - 0.5) * 60
+        (r1 - 0.5) * 60,
+        (r2 - 0.5) * 60,
+        (r3 - 0.5) * 60
       );
   }
+};
+
+// 生成目标位置（树上的位置）
+const generateTargetPosition = (index: number): THREE.Vector3 => {
+  const r1 = seededRandom(index * 7 + 100);
+  const r2 = seededRandom(index * 7 + 101);
+  const h = CONFIG.tree.height;
+  const y = (r1 * h) - (h / 2);
+  const rBase = CONFIG.tree.radius;
+  const currentRadius = (rBase * (1 - (y + (h / 2)) / h)) * 0.95;
+  const theta = r2 * Math.PI * 2;
+  return new THREE.Vector3(currentRadius * Math.cos(theta), y, currentRadius * Math.sin(theta));
 };
 
 // 根据聚合形状计算延迟
@@ -110,6 +132,12 @@ export const ChristmasElements = ({
   const count = CONFIG.counts.elements;
   const groupRef = useRef<THREE.Group>(null);
   const progressRef = useRef(0);
+  
+  // 存储当前动画中的 chaos 位置（用于平滑过渡散开形状）
+  const currentChaosRef = useRef<THREE.Vector3[]>([]);
+  const targetChaosRef = useRef<THREE.Vector3[]>([]);
+  const chaosTransitionRef = useRef(1); // 0-1，chaos 位置过渡进度
+  const prevScatterShapeRef = useRef(scatterShape);
 
   // 加载自定义图片纹理
   const textures = useMemo(() => {
@@ -138,48 +166,76 @@ export const ChristmasElements = ({
   const sphereGeometry = useMemo(() => new THREE.SphereGeometry(0.5, 16, 16), []);
   const caneGeometry = useMemo(() => new THREE.CylinderGeometry(0.15, 0.15, 1.2, 8), []);
 
+  // 基础数据（不依赖 scatterShape，只在 count 或 gatherShape 变化时重新生成）
   const data = useMemo(() => {
-    return new Array(count).fill(0).map(() => {
-      const chaosPos = generateScatterPosition(scatterShape);
-      const h = CONFIG.tree.height;
-      const y = (Math.random() * h) - (h / 2);
-      const rBase = CONFIG.tree.radius;
-      const currentRadius = (rBase * (1 - (y + (h / 2)) / h)) * 0.95;
-      const theta = Math.random() * Math.PI * 2;
-      const targetPos = new THREE.Vector3(currentRadius * Math.cos(theta), y, currentRadius * Math.sin(theta));
+    return new Array(count).fill(0).map((_, i) => {
+      const targetPos = generateTargetPosition(i);
       const gatherDelay = calculateGatherDelay(targetPos, gatherShape);
 
-      const type = Math.floor(Math.random() * 3); // 0=box, 1=sphere, 2=cylinder
+      const r1 = seededRandom(i * 5 + 200);
+      const r2 = seededRandom(i * 5 + 201);
+      const r3 = seededRandom(i * 5 + 202);
+      const r4 = seededRandom(i * 5 + 203);
+      const r5 = seededRandom(i * 5 + 204);
+
+      const type = Math.floor(r1 * 3); // 0=box, 1=sphere, 2=cylinder
       let color;
       let scale = 1;
       if (type === 0) {
-        color = CONFIG.colors.giftColors[Math.floor(Math.random() * CONFIG.colors.giftColors.length)];
-        scale = 0.8 + Math.random() * 0.4;
+        color = CONFIG.colors.giftColors[Math.floor(r2 * CONFIG.colors.giftColors.length)];
+        scale = 0.8 + r3 * 0.4;
       } else if (type === 1) {
-        color = CONFIG.colors.giftColors[Math.floor(Math.random() * CONFIG.colors.giftColors.length)];
-        scale = 0.6 + Math.random() * 0.4;
+        color = CONFIG.colors.giftColors[Math.floor(r2 * CONFIG.colors.giftColors.length)];
+        scale = 0.6 + r3 * 0.4;
       } else {
-        color = Math.random() > 0.5 ? CONFIG.colors.red : CONFIG.colors.white;
-        scale = 0.7 + Math.random() * 0.3;
+        color = r2 > 0.5 ? CONFIG.colors.red : CONFIG.colors.white;
+        scale = 0.7 + r3 * 0.3;
       }
 
       const rotationSpeed = {
-        x: (Math.random() - 0.5) * 2.0,
-        y: (Math.random() - 0.5) * 2.0,
-        z: (Math.random() - 0.5) * 2.0
+        x: (r3 - 0.5) * 2.0,
+        y: (r4 - 0.5) * 2.0,
+        z: (r5 - 0.5) * 2.0
       };
       return {
         type,
-        chaosPos,
         targetPos,
         color,
         scale,
         gatherDelay,
-        chaosRotation: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI),
+        chaosRotation: new THREE.Euler(r3 * Math.PI, r4 * Math.PI, r5 * Math.PI),
         rotationSpeed
       };
     });
-  }, [count, scatterShape, gatherShape]);
+  }, [count, gatherShape]);
+
+  // 初始化 chaos 位置
+  useEffect(() => {
+    if (currentChaosRef.current.length !== count) {
+      currentChaosRef.current = data.map((_, i) => generateScatterPosition(scatterShape, i));
+      targetChaosRef.current = currentChaosRef.current.map(p => p.clone());
+      chaosTransitionRef.current = 1;
+    }
+  }, [count, data, scatterShape]);
+
+  // 当 scatterShape 改变时，设置新的目标 chaos 位置
+  useEffect(() => {
+    if (prevScatterShapeRef.current !== scatterShape) {
+      // 将当前位置保存为起点
+      currentChaosRef.current = currentChaosRef.current.map((pos, i) => {
+        const newPos = pos.clone();
+        // 如果正在过渡中，使用插值后的位置
+        if (chaosTransitionRef.current < 1) {
+          newPos.lerp(targetChaosRef.current[i], chaosTransitionRef.current);
+        }
+        return newPos;
+      });
+      // 设置新的目标位置
+      targetChaosRef.current = data.map((_, i) => generateScatterPosition(scatterShape, i));
+      chaosTransitionRef.current = 0;
+      prevScatterShapeRef.current = scatterShape;
+    }
+  }, [scatterShape, data]);
 
   // 动画持续时间（秒），speed 越大越快：0.3x -> 3.3秒, 1x -> 1秒, 3x -> 0.33秒
   const duration = 1 / Math.max(0.3, Math.min(3, speed));
@@ -199,24 +255,32 @@ export const ChristmasElements = ({
     }
     const rawT = progressRef.current;
     
+    // 更新 chaos 位置过渡（散开形状切换时的平滑过渡）
+    if (chaosTransitionRef.current < 1) {
+      chaosTransitionRef.current = Math.min(1, chaosTransitionRef.current + step);
+    }
+    
     groupRef.current.children.forEach((child, i) => {
       const objData = data[i];
       
+      // 计算当前的 chaos 位置（考虑散开形状切换的过渡）
+      const currentChaos = currentChaosRef.current[i];
+      const targetChaos = targetChaosRef.current[i];
+      const chaosT = easeFn(chaosTransitionRef.current);
+      const animatedChaosPos = currentChaos.clone().lerp(targetChaos, chaosT);
+      
       // 统一使用基于延迟的进度计算，确保打断时位置连续
-      // 延迟影响：gatherDelay 大的元素在聚合时后到达，在散开时先离开
       const delay = objData.gatherDelay;
-      // 将 rawT 映射到考虑延迟的进度
       let elementT: number;
       if (delay === 0) {
         elementT = easeFn(rawT);
       } else {
-        // 使用 S 曲线来平滑延迟效果，避免打断时跳变
         const adjustedT = Math.max(0, Math.min(1, (rawT - delay * 0.5) / (1 - delay * 0.5)));
         elementT = easeFn(adjustedT);
       }
       
-      // 使用缓动函数插值位置
-      child.position.lerpVectors(objData.chaosPos, objData.targetPos, elementT);
+      // 使用缓动函数插值位置（从动画中的 chaos 位置到目标位置）
+      child.position.lerpVectors(animatedChaosPos, objData.targetPos, elementT);
       
       // 如果是精灵（图片），让它面向相机
       if (child instanceof THREE.Sprite) {
@@ -244,16 +308,26 @@ export const ChristmasElements = ({
     return textures.cylinder;
   };
 
+  // 获取初始位置（用于渲染）
+  const getInitialPosition = (index: number) => {
+    if (currentChaosRef.current[index]) {
+      return currentChaosRef.current[index].clone();
+    }
+    return generateScatterPosition(scatterShape, index);
+  };
+
   return (
     <group ref={groupRef}>
       {data.map((obj, i) => {
+        const initialPos = getInitialPosition(i);
+        
         // 使用自定义图片
         if (useCustomImage(obj.type)) {
           const texture = getTexture(obj.type);
           return (
             <sprite 
               key={i} 
-              position={obj.chaosPos.clone()}
+              position={initialPos}
               scale={[obj.scale * 1.5, obj.scale * 1.5, 1]}
             >
               <spriteMaterial 
@@ -275,7 +349,7 @@ export const ChristmasElements = ({
         return (
           <mesh 
             key={i} 
-            position={obj.chaosPos.clone()}
+            position={initialPos}
             scale={[obj.scale, obj.scale, obj.scale]} 
             geometry={geometry} 
             rotation={obj.chaosRotation}

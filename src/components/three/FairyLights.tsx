@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../../config';
@@ -23,13 +23,23 @@ const easingFunctions: Record<AnimationEasing, (t: number) => number> = {
   }
 };
 
-// 根据散开形状生成位置
-const generateScatterPosition = (shape: ScatterShape): THREE.Vector3 => {
+// 种子随机函数
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+// 根据散开形状和索引生成位置（确定性）
+const generateScatterPosition = (shape: ScatterShape, index: number): THREE.Vector3 => {
+  const r1 = seededRandom(index * 3 + 1);
+  const r2 = seededRandom(index * 3 + 2);
+  const r3 = seededRandom(index * 3 + 3);
+  
   switch (shape) {
     case 'explosion': {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 18 + Math.random() * 22;
+      const theta = r1 * Math.PI * 2;
+      const phi = Math.acos(2 * r2 - 1);
+      const r = 18 + r3 * 22;
       return new THREE.Vector3(
         r * Math.sin(phi) * Math.cos(theta),
         r * Math.sin(phi) * Math.sin(theta),
@@ -37,33 +47,45 @@ const generateScatterPosition = (shape: ScatterShape): THREE.Vector3 => {
       );
     }
     case 'spiral': {
-      const t = Math.random();
+      const t = r1;
       const angle = t * Math.PI * 12;
-      const r = 6 + t * 22 + Math.random() * 4;
-      const y = -18 + t * 45 + (Math.random() - 0.5) * 6;
-      return new THREE.Vector3(r * Math.cos(angle), y, r * Math.sin(angle));
+      const radius = 6 + t * 22 + r2 * 4;
+      const y = -18 + t * 45 + (r3 - 0.5) * 6;
+      return new THREE.Vector3(radius * Math.cos(angle), y, radius * Math.sin(angle));
     }
     case 'rain': {
       return new THREE.Vector3(
-        (Math.random() - 0.5) * 55,
-        22 + Math.random() * 32,
-        (Math.random() - 0.5) * 55
+        (r1 - 0.5) * 55,
+        22 + r2 * 32,
+        (r3 - 0.5) * 55
       );
     }
     case 'ring': {
-      const angle = Math.random() * Math.PI * 2;
-      const r = 20 + Math.random() * 8;
-      const y = (Math.random() - 0.5) * 12;
-      return new THREE.Vector3(r * Math.cos(angle), y, r * Math.sin(angle));
+      const angle = r1 * Math.PI * 2;
+      const radius = 20 + r2 * 8;
+      const y = (r3 - 0.5) * 12;
+      return new THREE.Vector3(radius * Math.cos(angle), y, radius * Math.sin(angle));
     }
     case 'sphere':
     default:
       return new THREE.Vector3(
-        (Math.random() - 0.5) * 60,
-        (Math.random() - 0.5) * 60,
-        (Math.random() - 0.5) * 60
+        (r1 - 0.5) * 60,
+        (r2 - 0.5) * 60,
+        (r3 - 0.5) * 60
       );
   }
+};
+
+// 生成目标位置
+const generateTargetPosition = (index: number): THREE.Vector3 => {
+  const r1 = seededRandom(index * 5 + 100);
+  const r2 = seededRandom(index * 5 + 101);
+  const h = CONFIG.tree.height;
+  const y = (r1 * h) - (h / 2);
+  const rBase = CONFIG.tree.radius;
+  const currentRadius = (rBase * (1 - (y + (h / 2)) / h)) + 0.3;
+  const theta = r2 * Math.PI * 2;
+  return new THREE.Vector3(currentRadius * Math.cos(theta), y, currentRadius * Math.sin(theta));
 };
 
 // 根据聚合形状计算延迟
@@ -103,26 +125,51 @@ export const FairyLights = ({
   const groupRef = useRef<THREE.Group>(null);
   const progressRef = useRef(0);
   const geometry = useMemo(() => new THREE.SphereGeometry(0.8, 8, 8), []);
+  
+  // 存储当前动画中的 chaos 位置（用于平滑过渡散开形状）
+  const currentChaosRef = useRef<THREE.Vector3[]>([]);
+  const targetChaosRef = useRef<THREE.Vector3[]>([]);
+  const chaosTransitionRef = useRef(1);
+  const prevScatterShapeRef = useRef(scatterShape);
 
+  // 基础数据（不依赖 scatterShape）
   const data = useMemo(() => {
-    return new Array(count).fill(0).map(() => {
-      const chaosPos = generateScatterPosition(scatterShape);
-      const h = CONFIG.tree.height;
-      const y = (Math.random() * h) - (h / 2);
-      const rBase = CONFIG.tree.radius;
-      const currentRadius = (rBase * (1 - (y + (h / 2)) / h)) + 0.3;
-      const theta = Math.random() * Math.PI * 2;
-      const targetPos = new THREE.Vector3(
-        currentRadius * Math.cos(theta),
-        y,
-        currentRadius * Math.sin(theta)
-      );
-      const color = CONFIG.colors.lights[Math.floor(Math.random() * CONFIG.colors.lights.length)];
-      const blinkSpeed = 2 + Math.random() * 3;
+    return new Array(count).fill(0).map((_, i) => {
+      const targetPos = generateTargetPosition(i);
+      const r1 = seededRandom(i * 4 + 200);
+      const r2 = seededRandom(i * 4 + 201);
+      const r3 = seededRandom(i * 4 + 202);
+      const color = CONFIG.colors.lights[Math.floor(r1 * CONFIG.colors.lights.length)];
+      const blinkSpeed = 2 + r2 * 3;
       const gatherDelay = calculateGatherDelay(targetPos, gatherShape);
-      return { chaosPos, targetPos, color, blinkSpeed, gatherDelay, timeOffset: Math.random() * 100 };
+      return { targetPos, color, blinkSpeed, gatherDelay, timeOffset: r3 * 100 };
     });
-  }, [count, scatterShape, gatherShape]);
+  }, [count, gatherShape]);
+
+  // 初始化 chaos 位置
+  useEffect(() => {
+    if (currentChaosRef.current.length !== count) {
+      currentChaosRef.current = data.map((_, i) => generateScatterPosition(scatterShape, i));
+      targetChaosRef.current = currentChaosRef.current.map(p => p.clone());
+      chaosTransitionRef.current = 1;
+    }
+  }, [count, data, scatterShape]);
+
+  // 当 scatterShape 改变时，设置新的目标 chaos 位置
+  useEffect(() => {
+    if (prevScatterShapeRef.current !== scatterShape) {
+      currentChaosRef.current = currentChaosRef.current.map((pos, i) => {
+        const newPos = pos.clone();
+        if (chaosTransitionRef.current < 1) {
+          newPos.lerp(targetChaosRef.current[i], chaosTransitionRef.current);
+        }
+        return newPos;
+      });
+      targetChaosRef.current = data.map((_, i) => generateScatterPosition(scatterShape, i));
+      chaosTransitionRef.current = 0;
+      prevScatterShapeRef.current = scatterShape;
+    }
+  }, [scatterShape, data]);
 
   // 动画持续时间（秒），speed 越大越快
   const duration = 1 / Math.max(0.3, Math.min(3, speed));
@@ -143,9 +190,20 @@ export const FairyLights = ({
     }
     const rawT = progressRef.current;
     
+    // 更新 chaos 位置过渡
+    if (chaosTransitionRef.current < 1) {
+      chaosTransitionRef.current = Math.min(1, chaosTransitionRef.current + step);
+    }
+    
     groupRef.current.children.forEach((child, i) => {
       const objData = data[i];
       const mesh = child as THREE.Mesh;
+      
+      // 计算当前的 chaos 位置
+      const currentChaos = currentChaosRef.current[i];
+      const targetChaos = targetChaosRef.current[i];
+      const chaosT = easeFn(chaosTransitionRef.current);
+      const animatedChaosPos = currentChaos.clone().lerp(targetChaos, chaosT);
       
       // 统一使用基于延迟的进度计算，确保打断时位置连续
       const delay = objData.gatherDelay;
@@ -158,7 +216,7 @@ export const FairyLights = ({
       }
       
       // 使用缓动函数插值位置
-      mesh.position.lerpVectors(objData.chaosPos, objData.targetPos, elementT);
+      mesh.position.lerpVectors(animatedChaosPos, objData.targetPos, elementT);
       const intensity = (Math.sin(time * objData.blinkSpeed + objData.timeOffset) + 1) / 2;
       if (mesh.material) {
         (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = isFormed ? 1 + intensity * 1.5 : 0.5 + intensity * 0.8;
@@ -166,10 +224,18 @@ export const FairyLights = ({
     });
   });
 
+  // 获取初始位置
+  const getInitialPosition = (index: number) => {
+    if (currentChaosRef.current[index]) {
+      return currentChaosRef.current[index].clone();
+    }
+    return generateScatterPosition(scatterShape, index);
+  };
+
   return (
     <group ref={groupRef}>
       {data.map((obj, i) => (
-        <mesh key={i} position={obj.chaosPos.clone()} scale={[0.15, 0.15, 0.15]} geometry={geometry}>
+        <mesh key={i} position={getInitialPosition(i)} scale={[0.15, 0.15, 0.15]} geometry={geometry}>
           <meshStandardMaterial color={obj.color} emissive={obj.color} emissiveIntensity={0} toneMapped={false} />
         </mesh>
       ))}
