@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Experience, GestureController, TitleOverlay, GestureTutorial } from '../components';
+import { Experience, GestureController, TitleOverlay, WelcomeTutorial } from '../components';
 import { CHRISTMAS_MUSIC_URL } from '../config';
 import { isMobile } from '../utils/helpers';
 import { sanitizeShareConfig, sanitizePhotos, sanitizeText } from '../utils/sanitize';
 import { getShare } from '../lib/r2';
 import type { ShareData } from '../lib/r2';
 import type { SceneState, SceneConfig } from '../types';
-import { Volume2, VolumeX, TreePine, Sparkles, Loader, Frown } from 'lucide-react';
+import { Volume2, VolumeX, TreePine, Sparkles, Loader, Frown, HelpCircle } from 'lucide-react';
 
 // 深度合并配置对象
 function deepMergeConfig<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
@@ -58,7 +58,14 @@ export default function SharePage({ shareId }: SharePageProps) {
   const [showText, setShowText] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [currentGesture, setCurrentGesture] = useState<string>('');
-  const [showTutorial, setShowTutorial] = useState(true);
+  // 教程状态 - 首次访问分享页显示
+  const [showTutorial, setShowTutorial] = useState(() => {
+    try {
+      return !localStorage.getItem('share_tutorial_seen');
+    } catch {
+      return true;
+    }
+  });
   const [hideTree, setHideTree] = useState(false);
   const [preloadTextPlayed, setPreloadTextPlayed] = useState(false);
 
@@ -233,18 +240,23 @@ export default function SharePage({ shareId }: SharePageProps) {
     if (gesture === 'Closed_Fist') setSceneState('FORMED');
   }, [sceneConfig, shareData]);
 
-  // 初始化音频
+  // 初始化音频 - 教程显示时不自动播放
   useEffect(() => {
     audioRef.current = new Audio(CHRISTMAS_MUSIC_URL);
     audioRef.current.loop = true;
     audioRef.current.volume = 0.5;
 
-    const playAudio = () => {
-      audioRef.current?.play().catch(() => setMusicPlaying(false));
-    };
-    playAudio();
+    // 教程显示时不播放音乐
+    if (!showTutorial) {
+      const playAudio = () => {
+        audioRef.current?.play().catch(() => setMusicPlaying(false));
+      };
+      playAudio();
+    }
 
     const handleInteraction = () => {
+      // 教程显示时不自动播放
+      if (showTutorial) return;
       if (audioRef.current && audioRef.current.paused) {
         audioRef.current.play().then(() => setMusicPlaying(true)).catch(() => {});
       }
@@ -262,7 +274,15 @@ export default function SharePage({ shareId }: SharePageProps) {
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 教程关闭后开始播放音乐
+  useEffect(() => {
+    if (!showTutorial && audioRef.current && musicPlaying) {
+      audioRef.current.play().catch(() => {});
+    }
+  }, [showTutorial, musicPlaying]);
 
   // 播放/暂停音乐
   const toggleMusic = useCallback(() => {
@@ -323,7 +343,7 @@ export default function SharePage({ shareId }: SharePageProps) {
 
   return (
     <div style={{ width: '100vw', height: '100dvh', backgroundColor: '#000', position: 'fixed', top: 0, left: 0, overflow: 'hidden', touchAction: 'none' }}>
-      {/* 3D Canvas */}
+      {/* 3D Canvas - 教程显示时暂停渲染 */}
       <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 1 }}>
         <Canvas
           dpr={mobile ? 1 : [1, 2]}
@@ -333,7 +353,7 @@ export default function SharePage({ shareId }: SharePageProps) {
             powerPreference: mobile ? 'low-power' : 'high-performance'
           }}
           shadows={false}
-          frameloop="always"
+          frameloop={showTutorial ? 'never' : 'always'}
         >
           <Experience
             sceneState={sceneState}
@@ -352,17 +372,17 @@ export default function SharePage({ shareId }: SharePageProps) {
         </Canvas>
       </div>
 
-      {/* 手势控制器 */}
+      {/* 手势控制器 - 教程显示时禁用 */}
       <GestureController
         onGesture={handleGestureChange}
         onMove={setRotationSpeed}
         onStatus={setAiStatus}
         debugMode={false}
-        enabled={true}
+        enabled={!showTutorial}
         isPhotoSelected={selectedPhotoIndex !== null}
       />
 
-      {/* 底部按钮 - 分享模式只显示音乐和聚合/散开 */}
+      {/* 底部按钮 - 分享模式只显示音乐、帮助和聚合/散开 */}
       <div style={{
         position: 'fixed',
         bottom: mobile ? 'max(20px, env(safe-area-inset-bottom))' : '30px',
@@ -377,6 +397,10 @@ export default function SharePage({ shareId }: SharePageProps) {
       }}>
         <button onClick={toggleMusic} style={buttonStyle(musicPlaying, mobile)}>
           {musicPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
+        </button>
+
+        <button onClick={() => setShowTutorial(true)} style={buttonStyle(false, mobile)} title="使用帮助">
+          <HelpCircle size={18} />
         </button>
 
         <button
@@ -412,8 +436,8 @@ export default function SharePage({ shareId }: SharePageProps) {
         font={sceneConfig.title?.font || 'Mountains of Christmas'}
       />
 
-      {/* 手势教程 */}
-      {showTutorial && <GestureTutorial onClose={() => setShowTutorial(false)} />}
+      {/* 使用教程 */}
+      {showTutorial && <WelcomeTutorial onClose={() => setShowTutorial(false)} isSharePage />}
     </div>
   );
 }

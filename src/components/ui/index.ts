@@ -2,6 +2,7 @@
 export { SettingsPanel } from './SettingsPanel';
 export { TitleOverlay } from './TitleOverlay';
 export { GestureTutorial } from './GestureTutorial';
+export { WelcomeTutorial } from './WelcomeTutorial';
 export { Modal } from './Modal';
 export type { ModalProps, ModalButton, ModalType } from './Modal';
 export { LyricsDisplay } from './LyricsDisplay';
