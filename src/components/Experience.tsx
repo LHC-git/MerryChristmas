@@ -4,7 +4,7 @@ import { OrbitControls, PerspectiveCamera, Stars, Sparkles } from '@react-three/
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { CONFIG } from '../config';
-import { isMobile } from '../utils/helpers';
+import { isMobile, isTablet } from '../utils/helpers';
 import type { SceneState, SceneConfig } from '../types';
 import {
   Foliage,
@@ -334,14 +334,17 @@ export const Experience = ({
       />
 
       {safeConfig.bloom.enabled && (
-        <EffectComposer multisampling={0}>
+        <EffectComposer 
+          multisampling={0}
+          frameBufferType={isTablet() ? THREE.HalfFloatType : THREE.UnsignedByteType}
+        >
           <Bloom 
-            luminanceThreshold={0.9} 
+            luminanceThreshold={isTablet() ? 0.95 : 0.9} 
             luminanceSmoothing={0.025} 
-            intensity={safeConfig.bloom.intensity} 
-            radius={0.5}
-            mipmapBlur
-            levels={5}
+            intensity={isTablet() ? safeConfig.bloom.intensity * 0.8 : safeConfig.bloom.intensity} 
+            radius={isTablet() ? 0.3 : 0.5}
+            mipmapBlur={!isTablet()}
+            levels={isTablet() ? 3 : 5}
           />
         </EffectComposer>
       )}
