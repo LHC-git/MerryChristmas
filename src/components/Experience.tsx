@@ -139,6 +139,8 @@ export const Experience = ({
               <ChristmasElements 
                 state={sceneState} 
                 customImages={config.elements?.customImages}
+                customColors={config.elements?.colors}
+                count={safeConfig.elements.count}
                 easing={config.animation?.easing}
                 speed={config.animation?.speed}
                 scatterShape={config.animation?.scatterShape}
@@ -148,6 +150,8 @@ export const Experience = ({
             {safeConfig.lights.enabled && (
               <FairyLights 
                 state={sceneState}
+                count={safeConfig.lights.count}
+                customColors={config.lights?.colors}
                 easing={config.animation?.easing}
                 speed={config.animation?.speed}
                 scatterShape={config.animation?.scatterShape}

@@ -16,12 +16,23 @@ const RATE_LIMIT = {
   maxUploads: 5
 };
 
-// CORS 头
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// 允许的来源域名
+const ALLOWED_ORIGINS = [
+  'https://xxx.xxx.com',
+  'https://r2-api.xxx.com'
+];
+
+// 获取 CORS 头（根据请求来源动态设置）
+function getCorsHeaders(request) {
+  const origin = request.headers.get('Origin');
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
+  };
+}
 
 // 安全响应头
 const securityHeaders = {
@@ -86,7 +97,8 @@ function validateShareData(data) {
 }
 
 // 响应辅助函数
-function jsonResponse(data, status = 200, extraHeaders = {}) {
+function jsonResponse(data, status = 200, request = null, extraHeaders = {}) {
+  const corsHeaders = request ? getCorsHeaders(request) : { 'Access-Control-Allow-Origin': ALLOWED_ORIGINS[0] };
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -99,10 +111,10 @@ function jsonResponse(data, status = 200, extraHeaders = {}) {
 }
 
 // 处理 OPTIONS 预检请求
-function handleOptions() {
+function handleOptions(request) {
   return new Response(null, {
     status: 204,
-    headers: corsHeaders,
+    headers: getCorsHeaders(request),
   });
 }
 
@@ -115,12 +127,34 @@ export default {
 
     // 处理 CORS 预检
     if (method === 'OPTIONS') {
-      return handleOptions();
+      return handleOptions(request);
+    }
+
+    // 来源验证（非 OPTIONS 请求）
+    const origin = request.headers.get('Origin');
+    const referer = request.headers.get('Referer');
+    
+    // 如果有 Origin 头，必须在白名单中
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      return jsonResponse({ error: 'Forbidden' }, 403, request);
+    }
+    
+    // 如果有 Referer，检查域名
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        const refererOrigin = refererUrl.origin;
+        if (!ALLOWED_ORIGINS.includes(refererOrigin)) {
+          return jsonResponse({ error: 'Forbidden' }, 403, request);
+        }
+      } catch (e) {
+        // 无效的 Referer
+      }
     }
 
     // 健康检查
     if (path === '/health' && method === 'GET') {
-      return jsonResponse({ status: 'ok', time: new Date().toISOString() });
+      return jsonResponse({ status: 'ok', time: new Date().toISOString() }, 200, request);
     }
 
     // 解析路径: /shares/{id}.json
@@ -133,10 +167,11 @@ export default {
     
     // 验证 ID 格式
     if (!validateShareId(id)) {
-      return jsonResponse({ error: 'Invalid share ID format' }, 400);
+      return jsonResponse({ error: 'Invalid share ID format' }, 400, request);
     }
 
     const key = `shares/${id}.json`;
+    const corsHeaders = getCorsHeaders(request);
 
     try {
       // GET - 读取分享
@@ -144,7 +179,7 @@ export default {
         const object = await env.R2_BUCKET.get(key);
         
         if (!object) {
-          return jsonResponse({ error: 'Not found' }, 404);
+          return jsonResponse({ error: 'Not found' }, 404, request);
         }
 
         const data = await object.text();
@@ -160,22 +195,28 @@ export default {
 
       // PUT - 创建/更新分享
       if (method === 'PUT') {
+        // 请求大小限制 (15MB)
+        const contentLength = request.headers.get('Content-Length');
+        if (contentLength && parseInt(contentLength) > 15 * 1024 * 1024) {
+          return jsonResponse({ error: 'Request too large' }, 413, request);
+        }
+
         let body;
         try {
           body = await request.json();
         } catch (e) {
-          return jsonResponse({ error: 'Invalid JSON' }, 400);
+          return jsonResponse({ error: 'Invalid JSON' }, 400, request);
         }
 
         // 验证数据
         const validationErrors = validateShareData(body);
         if (validationErrors.length > 0) {
-          return jsonResponse({ error: 'Validation failed', details: validationErrors }, 400);
+          return jsonResponse({ error: 'Validation failed', details: validationErrors }, 400, request);
         }
 
         // ID 一致性检查
         if (body.id !== id) {
-          return jsonResponse({ error: 'ID mismatch' }, 400);
+          return jsonResponse({ error: 'ID mismatch' }, 400, request);
         }
 
         // 检查是否是更新操作
@@ -183,7 +224,7 @@ export default {
         if (existing) {
           const existingData = await existing.json();
           if (existingData.editToken !== body.editToken) {
-            return jsonResponse({ error: 'Unauthorized' }, 401);
+            return jsonResponse({ error: 'Unauthorized' }, 401, request);
           }
         }
 
@@ -192,7 +233,7 @@ export default {
           httpMetadata: { contentType: 'application/json' },
         });
 
-        return jsonResponse({ success: true });
+        return jsonResponse({ success: true }, 200, request);
       }
 
       // DELETE - 删除分享
@@ -200,32 +241,32 @@ export default {
         const token = url.searchParams.get('token');
         
         if (!token) {
-          return jsonResponse({ error: 'Token required' }, 401);
+          return jsonResponse({ error: 'Token required' }, 401, request);
         }
 
         if (!validateEditToken(token)) {
-          return jsonResponse({ error: 'Invalid token format' }, 400);
+          return jsonResponse({ error: 'Invalid token format' }, 400, request);
         }
 
         // 验证 token
         const existing = await env.R2_BUCKET.get(key);
         if (!existing) {
-          return jsonResponse({ error: 'Not found' }, 404);
+          return jsonResponse({ error: 'Not found' }, 404, request);
         }
 
         const existingData = await existing.json();
         if (existingData.editToken !== token) {
-          return jsonResponse({ error: 'Unauthorized' }, 401);
+          return jsonResponse({ error: 'Unauthorized' }, 401, request);
         }
 
         await env.R2_BUCKET.delete(key);
-        return jsonResponse({ success: true });
+        return jsonResponse({ success: true }, 200, request);
       }
 
-      return jsonResponse({ error: 'Method not allowed' }, 405);
+      return jsonResponse({ error: 'Method not allowed' }, 405, request);
     } catch (error) {
       console.error('Error:', error);
-      return jsonResponse({ error: 'Internal server error' }, 500);
+      return jsonResponse({ error: 'Internal server error' }, 500, request);
     }
   },
 };

@@ -1,12 +1,30 @@
 import React from 'react';
-import type { SceneConfig, GestureConfig, GestureAction, MusicConfig, AnimationEasing, ScatterShape, GatherShape } from '../../types';
+import type { SceneConfig, GestureConfig, GestureAction, MusicConfig, AnimationEasing, ScatterShape, GatherShape, DecorationColors } from '../../types';
 import { PRESET_MUSIC } from '../../types';
 import { isMobile } from '../../utils/helpers';
 import { TITLE_FONTS } from './TitleOverlay';
 import { 
   TreePine, Sparkles, Heart, Type, X, Settings,
-  TreeDeciduous, Lightbulb, Gift, Ribbon, Snowflake, CloudFog, Star, Rainbow, Bot, Hand, Music, Upload, Zap
+  TreeDeciduous, Lightbulb, Gift, Ribbon, Snowflake, CloudFog, Star, Rainbow, Bot, Hand, Music, Upload, Zap, Palette
 } from 'lucide-react';
+
+// 默认装饰颜色
+const DEFAULT_DECORATION_COLORS: DecorationColors = {
+  primary: '#D32F2F',
+  secondary: '#FFD700',
+  accent: '#1976D2',
+  candy1: '#FF0000',
+  candy2: '#FFFFFF'
+};
+
+// 预设颜色方案
+const COLOR_PRESETS = [
+  { name: '经典圣诞', colors: { primary: '#D32F2F', secondary: '#FFD700', accent: '#2E7D32', candy1: '#FF0000', candy2: '#FFFFFF' } },
+  { name: '冰雪蓝', colors: { primary: '#1976D2', secondary: '#90CAF9', accent: '#E3F2FD', candy1: '#2196F3', candy2: '#FFFFFF' } },
+  { name: '粉色梦幻', colors: { primary: '#E91E63', secondary: '#F8BBD9', accent: '#FCE4EC', candy1: '#FF4081', candy2: '#FFFFFF' } },
+  { name: '金色奢华', colors: { primary: '#FFD700', secondary: '#FFA000', accent: '#FFECB3', candy1: '#FF8F00', candy2: '#FFF8E1' } },
+  { name: '紫色神秘', colors: { primary: '#9C27B0', secondary: '#E1BEE7', accent: '#7B1FA2', candy1: '#AB47BC', candy2: '#F3E5F5' } },
+];
 
 // 动画缓动选项
 const animationEasingOptions: { value: AnimationEasing; label: string; desc: string }[] = [
@@ -429,6 +447,75 @@ export const SettingsPanel = ({ config, onChange, onClose, aiEnabled, onAiToggle
           <span>显示彩灯</span>
           <input type="checkbox" checked={config.lights.enabled} onChange={e => onChange({ ...config, lights: { ...config.lights, enabled: e.target.checked } })} style={{ accentColor: '#FFD700' }} />
         </div>
+        <div style={labelStyle}><span>数量: {config.lights.count || 400}</span></div>
+        <input type="range" min="100" max="800" step="50" value={config.lights.count || 400} onChange={e => onChange({ ...config, lights: { ...config.lights, count: Number(e.target.value) } })} style={sliderStyle} />
+        
+        {/* 彩灯颜色 */}
+        <div style={{ marginTop: '10px' }}>
+          <div style={{ ...labelStyle, marginBottom: '6px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Palette size={12} /> 彩灯颜色</span>
+            {config.lights.colors && (
+              <button
+                onClick={() => onChange({ ...config, lights: { ...config.lights, colors: undefined } })}
+                style={{ background: 'none', border: 'none', color: '#ff6666', cursor: 'pointer', fontSize: '10px' }}
+              >
+                重置
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+            {(['color1', 'color2', 'color3', 'color4'] as const).map((key, idx) => (
+              <div key={key}>
+                <input
+                  type="color"
+                  value={config.lights.colors?.[key] || ['#FF0000', '#00FF00', '#0000FF', '#FFFF00'][idx]}
+                  onChange={e => onChange({
+                    ...config,
+                    lights: {
+                      ...config.lights,
+                      colors: {
+                        color1: config.lights.colors?.color1 || '#FF0000',
+                        color2: config.lights.colors?.color2 || '#00FF00',
+                        color3: config.lights.colors?.color3 || '#0000FF',
+                        color4: config.lights.colors?.color4 || '#FFFF00',
+                        [key]: e.target.value
+                      }
+                    }
+                  })}
+                  style={{ width: '100%', height: '28px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+                />
+              </div>
+            ))}
+          </div>
+          {/* 颜色预览 */}
+          <div style={{ 
+            marginTop: '6px', 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: '6px',
+            padding: '6px',
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: '4px'
+          }}>
+            {[
+              config.lights.colors?.color1 || '#FF0000',
+              config.lights.colors?.color2 || '#00FF00',
+              config.lights.colors?.color3 || '#0000FF',
+              config.lights.colors?.color4 || '#FFFF00'
+            ].map((color, idx) => (
+              <div 
+                key={idx}
+                style={{ 
+                  width: '16px', 
+                  height: '16px', 
+                  borderRadius: '50%', 
+                  background: color,
+                  boxShadow: `0 0 10px ${color}, 0 0 20px ${color}80`
+                }} 
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* 圣诞元素 */}
@@ -438,6 +525,8 @@ export const SettingsPanel = ({ config, onChange, onClose, aiEnabled, onAiToggle
           <span>显示装饰</span>
           <input type="checkbox" checked={config.elements.enabled} onChange={e => onChange({ ...config, elements: { ...config.elements, enabled: e.target.checked } })} style={{ accentColor: '#FFD700' }} />
         </div>
+        <div style={labelStyle}><span>数量: {config.elements.count || 500}</span></div>
+        <input type="range" min="100" max="1000" step="50" value={config.elements.count || 500} onChange={e => onChange({ ...config, elements: { ...config.elements, count: Number(e.target.value) } })} style={sliderStyle} />
         
         {/* 自定义装饰图片 */}
         <p style={{ fontSize: '10px', color: '#888', margin: '8px 0 6px 0' }}>
@@ -580,6 +669,192 @@ export const SettingsPanel = ({ config, onChange, onClose, aiEnabled, onAiToggle
           {config.elements.customImages?.cylinder && (
             <img src={config.elements.customImages.cylinder} alt="cylinder" style={{ width: '32px', height: '32px', marginTop: '4px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }} />
           )}
+        </div>
+
+        {/* 装饰颜色 */}
+        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ ...labelStyle, marginBottom: '8px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Palette size={12} /> 装饰颜色</span>
+            {config.elements.colors && (
+              <button
+                onClick={() => onChange({ 
+                  ...config, 
+                  elements: { ...config.elements, colors: undefined } 
+                })}
+                style={{ background: 'none', border: 'none', color: '#ff6666', cursor: 'pointer', fontSize: '10px' }}
+              >
+                重置
+              </button>
+            )}
+          </div>
+          
+          {/* 预设方案 */}
+          <div style={{ marginBottom: '10px' }}>
+            <span style={{ fontSize: '10px', color: '#888' }}>预设方案</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+              {COLOR_PRESETS.map((preset, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => onChange({
+                    ...config,
+                    elements: { ...config.elements, colors: preset.colors }
+                  })}
+                  style={{
+                    padding: '4px 8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,215,0,0.3)',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontSize: '10px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span style={{ 
+                    width: '12px', 
+                    height: '12px', 
+                    borderRadius: '2px', 
+                    background: `linear-gradient(135deg, ${preset.colors.primary} 50%, ${preset.colors.secondary} 50%)` 
+                  }} />
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 自定义颜色 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div>
+              <span style={{ fontSize: '10px', color: '#888' }}>主色</span>
+              <input
+                type="color"
+                value={config.elements.colors?.primary || DEFAULT_DECORATION_COLORS.primary}
+                onChange={e => onChange({
+                  ...config,
+                  elements: { 
+                    ...config.elements, 
+                    colors: { 
+                      ...DEFAULT_DECORATION_COLORS,
+                      ...config.elements.colors, 
+                      primary: e.target.value 
+                    } 
+                  }
+                })}
+                style={{ width: '100%', height: '28px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+              />
+            </div>
+            <div>
+              <span style={{ fontSize: '10px', color: '#888' }}>次色</span>
+              <input
+                type="color"
+                value={config.elements.colors?.secondary || DEFAULT_DECORATION_COLORS.secondary}
+                onChange={e => onChange({
+                  ...config,
+                  elements: { 
+                    ...config.elements, 
+                    colors: { 
+                      ...DEFAULT_DECORATION_COLORS,
+                      ...config.elements.colors, 
+                      secondary: e.target.value 
+                    } 
+                  }
+                })}
+                style={{ width: '100%', height: '28px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+              />
+            </div>
+            <div>
+              <span style={{ fontSize: '10px', color: '#888' }}>强调色</span>
+              <input
+                type="color"
+                value={config.elements.colors?.accent || DEFAULT_DECORATION_COLORS.accent}
+                onChange={e => onChange({
+                  ...config,
+                  elements: { 
+                    ...config.elements, 
+                    colors: { 
+                      ...DEFAULT_DECORATION_COLORS,
+                      ...config.elements.colors, 
+                      accent: e.target.value 
+                    } 
+                  }
+                })}
+                style={{ width: '100%', height: '28px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+              />
+            </div>
+            <div>
+              <span style={{ fontSize: '10px', color: '#888' }}>糖果色</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <input
+                  type="color"
+                  value={config.elements.colors?.candy1 || DEFAULT_DECORATION_COLORS.candy1}
+                  onChange={e => onChange({
+                    ...config,
+                    elements: { 
+                      ...config.elements, 
+                      colors: { 
+                        ...DEFAULT_DECORATION_COLORS,
+                        ...config.elements.colors, 
+                        candy1: e.target.value 
+                      } 
+                    }
+                  })}
+                  style={{ flex: 1, height: '28px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+                />
+                <input
+                  type="color"
+                  value={config.elements.colors?.candy2 || DEFAULT_DECORATION_COLORS.candy2}
+                  onChange={e => onChange({
+                    ...config,
+                    elements: { 
+                      ...config.elements, 
+                      colors: { 
+                        ...DEFAULT_DECORATION_COLORS,
+                        ...config.elements.colors, 
+                        candy2: e.target.value 
+                      } 
+                    }
+                  })}
+                  style={{ flex: 1, height: '28px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* 颜色预览 */}
+          <div style={{ 
+            marginTop: '8px', 
+            padding: '8px', 
+            background: 'rgba(0,0,0,0.3)', 
+            borderRadius: '4px',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '8px'
+          }}>
+            {[
+              config.elements.colors?.primary || DEFAULT_DECORATION_COLORS.primary,
+              config.elements.colors?.secondary || DEFAULT_DECORATION_COLORS.secondary,
+              config.elements.colors?.accent || DEFAULT_DECORATION_COLORS.accent
+            ].map((color, idx) => (
+              <div 
+                key={idx}
+                style={{ 
+                  width: '24px', 
+                  height: '24px', 
+                  borderRadius: '50%', 
+                  background: color,
+                  boxShadow: `0 0 8px ${color}80`
+                }} 
+              />
+            ))}
+            <div style={{ 
+              width: '24px', 
+              height: '24px', 
+              borderRadius: '4px', 
+              background: `repeating-linear-gradient(45deg, ${config.elements.colors?.candy1 || DEFAULT_DECORATION_COLORS.candy1}, ${config.elements.colors?.candy1 || DEFAULT_DECORATION_COLORS.candy1} 3px, ${config.elements.colors?.candy2 || DEFAULT_DECORATION_COLORS.candy2} 3px, ${config.elements.colors?.candy2 || DEFAULT_DECORATION_COLORS.candy2} 6px)`
+            }} />
+          </div>
         </div>
       </div>
 

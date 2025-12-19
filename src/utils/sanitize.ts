@@ -133,6 +133,20 @@ export const sanitizeShareConfig = (config: unknown): Record<string, unknown> =>
       enabled: sanitizeBoolean(l.enabled, true),
       count: sanitizeNumber(l.count, 50, 1000, 400)
     };
+    // 彩灯颜色验证
+    if (l.colors && typeof l.colors === 'object') {
+      const c = l.colors as Record<string, unknown>;
+      const colors: Record<string, string> = {};
+      const colorKeys = ['color1', 'color2', 'color3', 'color4'];
+      for (const key of colorKeys) {
+        if (typeof c[key] === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c[key] as string)) {
+          colors[key] = c[key] as string;
+        }
+      }
+      if (Object.keys(colors).length > 0) {
+        (sanitized.lights as Record<string, unknown>).colors = colors;
+      }
+    }
   }
   
   // 圣诞元素配置
@@ -160,6 +174,20 @@ export const sanitizeShareConfig = (config: unknown): Record<string, unknown> =>
       }
       if (Object.keys(customImages).length > 0) {
         (sanitized.elements as Record<string, unknown>).customImages = customImages;
+      }
+    }
+    // 自定义颜色验证
+    if (e.colors && typeof e.colors === 'object') {
+      const c = e.colors as Record<string, unknown>;
+      const colors: Record<string, string> = {};
+      const colorKeys = ['primary', 'secondary', 'accent', 'candy1', 'candy2'];
+      for (const key of colorKeys) {
+        if (typeof c[key] === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c[key] as string)) {
+          colors[key] = c[key] as string;
+        }
+      }
+      if (Object.keys(colors).length > 0) {
+        (sanitized.elements as Record<string, unknown>).colors = colors;
       }
     }
   }

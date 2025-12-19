@@ -2,7 +2,15 @@ import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../../config';
-import type { SceneState, AnimationEasing, ScatterShape, GatherShape } from '../../types';
+import type { SceneState, AnimationEasing, ScatterShape, GatherShape, LightColors } from '../../types';
+
+// 默认彩灯颜色
+const DEFAULT_LIGHT_COLORS: LightColors = {
+  color1: '#FF0000',  // 红
+  color2: '#00FF00',  // 绿
+  color3: '#0000FF',  // 蓝
+  color4: '#FFFF00'   // 黄
+};
 
 // 缓动函数
 const easingFunctions: Record<AnimationEasing, (t: number) => number> = {
@@ -108,6 +116,8 @@ const calculateGatherDelay = (targetPos: THREE.Vector3, shape: GatherShape): num
 
 interface FairyLightsProps {
   state: SceneState;
+  count?: number;
+  customColors?: LightColors;
   easing?: AnimationEasing;
   speed?: number;
   scatterShape?: ScatterShape;
@@ -115,13 +125,19 @@ interface FairyLightsProps {
 }
 
 export const FairyLights = ({ 
-  state, 
+  state,
+  count = CONFIG.counts.lights,
+  customColors,
   easing = 'easeInOut', 
   speed = 1,
   scatterShape = 'sphere',
   gatherShape = 'direct'
 }: FairyLightsProps) => {
-  const count = CONFIG.counts.lights;
+  // 合并自定义颜色
+  const lightColors = useMemo(() => {
+    const colors = { ...DEFAULT_LIGHT_COLORS, ...customColors };
+    return [colors.color1, colors.color2, colors.color3, colors.color4];
+  }, [customColors]);
   const groupRef = useRef<THREE.Group>(null);
   const progressRef = useRef(0);
   const geometry = useMemo(() => new THREE.SphereGeometry(0.8, 8, 8), []);
@@ -139,12 +155,12 @@ export const FairyLights = ({
       const r1 = seededRandom(i * 4 + 200);
       const r2 = seededRandom(i * 4 + 201);
       const r3 = seededRandom(i * 4 + 202);
-      const color = CONFIG.colors.lights[Math.floor(r1 * CONFIG.colors.lights.length)];
+      const color = lightColors[Math.floor(r1 * lightColors.length)];
       const blinkSpeed = 2 + r2 * 3;
       const gatherDelay = calculateGatherDelay(targetPos, gatherShape);
       return { targetPos, color, blinkSpeed, gatherDelay, timeOffset: r3 * 100 };
     });
-  }, [count, gatherShape]);
+  }, [count, gatherShape, lightColors]);
 
   // 初始化 chaos 位置
   useEffect(() => {

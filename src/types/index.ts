@@ -83,11 +83,28 @@ export interface AnimationConfig {
   gatherShape: GatherShape;   // 聚合形状
 }
 
+// 装饰颜色配置
+export interface DecorationColors {
+  primary: string;    // 主色（礼物盒、球体）
+  secondary: string;  // 次色（礼物盒、球体）
+  accent: string;     // 强调色（礼物盒、球体）
+  candy1: string;     // 糖果棒颜色1
+  candy2: string;     // 糖果棒颜色2
+}
+
+// 彩灯颜色配置
+export interface LightColors {
+  color1: string;
+  color2: string;
+  color3: string;
+  color4: string;
+}
+
 // 场景配置类型
 export interface SceneConfig {
   foliage: { enabled: boolean; count: number };
   animation?: AnimationConfig;  // 聚合/散开动画配置
-  lights: { enabled: boolean; count: number };
+  lights: { enabled: boolean; count: number; colors?: LightColors };
   elements: { 
     enabled: boolean; 
     count: number;
@@ -96,6 +113,7 @@ export interface SceneConfig {
       sphere?: string;   // 替换球体的 PNG 图片 (base64)
       cylinder?: string; // 替换圆柱的 PNG 图片 (base64)
     };
+    colors?: DecorationColors;  // 自定义装饰颜色
   };
   snow: { enabled: boolean; count: number; speed: number; size: number; opacity: number };
   sparkles: { enabled: boolean; count: number };

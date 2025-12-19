@@ -2,7 +2,7 @@ import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../../config';
-import type { SceneState, AnimationEasing, ScatterShape, GatherShape } from '../../types';
+import type { SceneState, AnimationEasing, ScatterShape, GatherShape, DecorationColors } from '../../types';
 
 // 缓动函数
 const easingFunctions: Record<AnimationEasing, (t: number) => number> = {
@@ -106,6 +106,15 @@ const calculateGatherDelay = (targetPos: THREE.Vector3, shape: GatherShape): num
   }
 };
 
+// 默认装饰颜色
+const DEFAULT_COLORS: DecorationColors = {
+  primary: '#D32F2F',   // 红色
+  secondary: '#FFD700', // 金色
+  accent: '#1976D2',    // 蓝色
+  candy1: '#FF0000',    // 糖果红
+  candy2: '#FFFFFF'     // 糖果白
+};
+
 interface ChristmasElementsProps {
   state: SceneState;
   customImages?: {
@@ -113,6 +122,8 @@ interface ChristmasElementsProps {
     sphere?: string;
     cylinder?: string;
   };
+  customColors?: DecorationColors;
+  count?: number;
   easing?: AnimationEasing;
   speed?: number;
   scatterShape?: ScatterShape;
@@ -123,13 +134,26 @@ interface ChristmasElementsProps {
 
 export const ChristmasElements = ({ 
   state, 
-  customImages, 
+  customImages,
+  customColors,
+  count = CONFIG.counts.elements,
   easing = 'easeInOut', 
   speed = 1,
   scatterShape = 'sphere',
   gatherShape = 'direct'
 }: ChristmasElementsProps) => {
-  const count = CONFIG.counts.elements;
+  // 合并自定义颜色
+  const colors = useMemo(() => ({
+    ...DEFAULT_COLORS,
+    ...customColors
+  }), [customColors]);
+  
+  // 装饰颜色数组（用于随机选择）
+  const decorationColors = useMemo(() => [
+    colors.primary,
+    colors.secondary,
+    colors.accent
+  ], [colors]);
   const groupRef = useRef<THREE.Group>(null);
   const progressRef = useRef(0);
   
@@ -166,7 +190,7 @@ export const ChristmasElements = ({
   const sphereGeometry = useMemo(() => new THREE.SphereGeometry(0.5, 16, 16), []);
   const caneGeometry = useMemo(() => new THREE.CylinderGeometry(0.15, 0.15, 1.2, 8), []);
 
-  // 基础数据（不依赖 scatterShape，只在 count 或 gatherShape 变化时重新生成）
+  // 基础数据（不依赖 scatterShape，只在 count 或 gatherShape 或 colors 变化时重新生成）
   const data = useMemo(() => {
     return new Array(count).fill(0).map((_, i) => {
       const targetPos = generateTargetPosition(i);
@@ -182,13 +206,16 @@ export const ChristmasElements = ({
       let color;
       let scale = 1;
       if (type === 0) {
-        color = CONFIG.colors.giftColors[Math.floor(r2 * CONFIG.colors.giftColors.length)];
+        // 礼物盒使用自定义颜色
+        color = decorationColors[Math.floor(r2 * decorationColors.length)];
         scale = 0.8 + r3 * 0.4;
       } else if (type === 1) {
-        color = CONFIG.colors.giftColors[Math.floor(r2 * CONFIG.colors.giftColors.length)];
+        // 球体使用自定义颜色
+        color = decorationColors[Math.floor(r2 * decorationColors.length)];
         scale = 0.6 + r3 * 0.4;
       } else {
-        color = r2 > 0.5 ? CONFIG.colors.red : CONFIG.colors.white;
+        // 糖果棒使用自定义糖果颜色
+        color = r2 > 0.5 ? colors.candy1 : colors.candy2;
         scale = 0.7 + r3 * 0.3;
       }
 
@@ -207,7 +234,7 @@ export const ChristmasElements = ({
         rotationSpeed
       };
     });
-  }, [count, gatherShape]);
+  }, [count, gatherShape, decorationColors, colors]);
 
   // 初始化 chaos 位置
   useEffect(() => {
