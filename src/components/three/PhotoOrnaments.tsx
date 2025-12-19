@@ -87,14 +87,38 @@ const generateScatterPosition = (shape: ScatterShape, index: number): THREE.Vect
   }
 };
 
-// 生成目标位置（支持自定义尺寸）
-const generateTargetPosition = (index: number, h: number, rBase: number): THREE.Vector3 => {
-  const r1 = seededRandom(index * 5 + 100);
-  const r2 = seededRandom(index * 5 + 101);
-  const y = (r1 * h) - (h / 2);
-  const currentRadius = (rBase * (1 - (y + (h / 2)) / h)) + 0.5;
-  const theta = r2 * Math.PI * 2;
-  return new THREE.Vector3(currentRadius * Math.cos(theta), y, currentRadius * Math.sin(theta));
+// 生成目标位置（支持自定义尺寸，使用均匀分布避免堆叠）
+const generateTargetPosition = (index: number, total: number, h: number, rBase: number): THREE.Vector3 => {
+  // 使用黄金角度分布，确保照片均匀分布在树上
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // 约137.5度
+  
+  // 根据索引计算高度层级，使用更均匀的分布
+  // 将照片分布在树的不同高度，避免集中在某一层
+  const heightRatio = (index + 0.5) / total; // 0到1之间
+  const y = (heightRatio * h * 0.9) - (h / 2) + (h * 0.05); // 留出顶部和底部边距
+  
+  // 根据高度计算当前半径（树是锥形的）
+  const normalizedY = (y + h / 2) / h; // 0=底部, 1=顶部
+  const currentRadius = rBase * (1 - normalizedY * 0.85) + 0.8; // 顶部留一点半径
+  
+  // 使用黄金角度 + 随机偏移，避免完美螺旋但保持均匀
+  const baseAngle = index * goldenAngle;
+  const angleOffset = seededRandom(index * 7 + 300) * 0.3 - 0.15; // 小幅随机偏移
+  const theta = baseAngle + angleOffset;
+  
+  // 添加小幅径向偏移，让分布更自然
+  const radiusOffset = (seededRandom(index * 7 + 301) - 0.5) * 0.8;
+  const finalRadius = Math.max(0.5, currentRadius + radiusOffset);
+  
+  // 添加小幅高度偏移
+  const yOffset = (seededRandom(index * 7 + 302) - 0.5) * 1.5;
+  const finalY = Math.max(-h / 2 + 0.5, Math.min(h / 2 - 0.5, y + yOffset));
+  
+  return new THREE.Vector3(
+    finalRadius * Math.cos(theta), 
+    finalY, 
+    finalRadius * Math.sin(theta)
+  );
 };
 
 // 根据聚合形状计算延迟（0-1范围，值越大越晚开始动画，支持自定义尺寸）
@@ -228,7 +252,7 @@ export const PhotoOrnaments = ({
   // 基础数据（不依赖 scatterShape）
   const data = useMemo(() => {
     return new Array(count).fill(0).map((_, i) => {
-      const targetPos = generateTargetPosition(i, actualHeight, actualRadius);
+      const targetPos = generateTargetPosition(i, count, actualHeight, actualRadius);
       const gatherDelay = calculateGatherDelay(targetPos, gatherShape, actualHeight, actualRadius);
 
       const r1 = seededRandom(i * 6 + 200);
