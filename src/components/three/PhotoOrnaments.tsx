@@ -135,6 +135,8 @@ interface PhotoOrnamentsProps {
   gatherShape?: GatherShape;
   photoScale?: number;      // 照片大小倍数
   frameColor?: string;      // 相框颜色
+  treeHeight?: number;
+  treeRadius?: number;
 }
 
 export const PhotoOrnaments = ({ 
@@ -147,8 +149,14 @@ export const PhotoOrnaments = ({
   scatterShape = 'sphere',
   gatherShape = 'direct',
   photoScale = 1.5,
-  frameColor = '#FFFFFF'
+  frameColor = '#FFFFFF',
+  treeHeight,
+  treeRadius
 }: PhotoOrnamentsProps) => {
+  // TODO: 后续重构内部函数以使用这些动态值
+  const _actualHeight = treeHeight ?? CONFIG.tree.height;
+  const _actualRadius = treeRadius ?? CONFIG.tree.radius;
+  void _actualHeight; void _actualRadius; // 暂时忽略未使用警告
   const textures = useTexture(photoPaths);
   const count = photoPaths.length;
   const groupRef = useRef<THREE.Group>(null);

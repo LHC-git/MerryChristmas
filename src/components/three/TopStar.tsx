@@ -9,9 +9,11 @@ import type { SceneState } from '../../types';
 interface TopStarProps {
   state: SceneState;
   avatarUrl?: string;
+  treeHeight?: number;
 }
 
-export const TopStar = ({ state, avatarUrl }: TopStarProps) => {
+export const TopStar = ({ state, avatarUrl, treeHeight }: TopStarProps) => {
+  const actualHeight = treeHeight ?? CONFIG.tree.height;
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const pointLightRef = useRef<THREE.PointLight>(null);
@@ -114,7 +116,7 @@ export const TopStar = ({ state, avatarUrl }: TopStarProps) => {
   const hasAvatar = !!avatarTexture;
 
   return (
-    <group ref={groupRef} position={[0, CONFIG.tree.height / 2 + 1.8, 0]}>
+    <group ref={groupRef} position={[0, actualHeight / 2 + 1.8, 0]}>
       <Float speed={2} rotationIntensity={0.2} floatIntensity={0.2}>
         {/* 金色立体星星（始终显示作为边框） */}
         <mesh geometry={starGeometry}>

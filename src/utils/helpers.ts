@@ -7,10 +7,15 @@ export const isMobile = (): boolean => {
     window.innerWidth < 768;
 };
 
-// 生成树形位置（支持可选的种子随机参数）
-export const getTreePosition = (seed1?: number, seed2?: number): [number, number, number] => {
-  const h = CONFIG.tree.height;
-  const rBase = CONFIG.tree.radius;
+// 生成树形位置（支持可选的种子随机参数和自定义尺寸）
+export const getTreePosition = (
+  seed1?: number, 
+  seed2?: number,
+  customHeight?: number,
+  customRadius?: number
+): [number, number, number] => {
+  const h = customHeight ?? CONFIG.tree.height;
+  const rBase = customRadius ?? CONFIG.tree.radius;
   const r1 = seed1 !== undefined ? seed1 : Math.random();
   const r2 = seed2 !== undefined ? seed2 : Math.random();
   // 使用 seed1 和 seed2 生成第三个伪随机数，确保分布均匀

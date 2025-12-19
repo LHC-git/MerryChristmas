@@ -114,6 +114,16 @@ export interface SpiralRibbonConfig {
   double: boolean;         // 是否双层（两条交错的带子）
 }
 
+// 发光流线配置
+export interface GlowingStreaksConfig {
+  enabled: boolean;
+  count: number;           // 流线数量 1-10
+  color: string;           // 流线颜色
+  speed: number;           // 速度 0.5-3
+  tailLength: number;      // 拖尾长度 0.5-2
+  lineWidth: number;       // 线条粗细 1-8
+}
+
 // 树叶粒子配置
 export interface FoliageConfig {
   enabled: boolean;
@@ -170,6 +180,7 @@ export interface SceneConfig {
   textEffect?: { color: string; size?: number };
   treeShape?: { height: number; radius: number };
   spiralRibbon?: SpiralRibbonConfig;  // 螺旋带子配置
+  glowingStreaks?: GlowingStreaksConfig;  // 发光流线配置
   topStar?: { avatarUrl?: string };  // 树顶星星头像
   intro?: {                // 开场文案配置
     enabled: boolean;

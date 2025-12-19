@@ -24,9 +24,13 @@ const easingFunctions: Record<AnimationEasing, (t: number) => number> = {
 };
 
 // 创建螺旋几何体
-const createSpiralGeometry = (turns: number, width: number, angleOffset: number = 0) => {
-  const treeHeight = CONFIG.tree.height;
-  const baseRadius = CONFIG.tree.radius;
+const createSpiralGeometry = (
+  turns: number, 
+  width: number, 
+  angleOffset: number = 0,
+  treeHeight: number = CONFIG.tree.height,
+  baseRadius: number = CONFIG.tree.radius
+) => {
   const ribbonThickness = 0.1;
   const segments = 200;
   
@@ -67,6 +71,8 @@ interface SpiralRibbonProps {
   secondGlowColor?: string;
   easing?: AnimationEasing;
   speed?: number;
+  treeHeight?: number;
+  treeRadius?: number;
 }
 
 export const SpiralRibbon = ({ 
@@ -79,7 +85,9 @@ export const SpiralRibbon = ({
   secondColor = '#FFD700',
   secondGlowColor = '#FFEC8B',
   easing = 'easeInOut',
-  speed = 1
+  speed = 1,
+  treeHeight,
+  treeRadius
 }: SpiralRibbonProps) => {
   const ribbonRef = useRef<THREE.Mesh>(null);
   const ribbon2Ref = useRef<THREE.Mesh>(null);
@@ -87,16 +95,19 @@ export const SpiralRibbon = ({
   const material2Ref = useRef<THREE.MeshStandardMaterial>(null);
   const progressRef = useRef(0);
 
+  const actualHeight = treeHeight ?? CONFIG.tree.height;
+  const actualRadius = treeRadius ?? CONFIG.tree.radius;
+
   // 创建螺旋丝带几何体
   const ribbonGeometry = useMemo(() => {
-    return createSpiralGeometry(turns, width, 0);
-  }, [turns, width]);
+    return createSpiralGeometry(turns, width, 0, actualHeight, actualRadius);
+  }, [turns, width, actualHeight, actualRadius]);
 
   // 第二条螺旋（双层时使用，偏移半圈）
   const ribbon2Geometry = useMemo(() => {
     if (!double) return null;
-    return createSpiralGeometry(turns, width, Math.PI);
-  }, [turns, width, double]);
+    return createSpiralGeometry(turns, width, Math.PI, actualHeight, actualRadius);
+  }, [turns, width, double, actualHeight, actualRadius]);
 
   // 动画持续时间（秒），speed 越大越快
   const duration = 1 / Math.max(0.3, Math.min(3, speed));

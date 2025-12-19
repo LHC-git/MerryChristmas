@@ -144,6 +144,8 @@ interface ChristmasElementsProps {
   speed?: number;
   scatterShape?: ScatterShape;
   gatherShape?: GatherShape;
+  treeHeight?: number;
+  treeRadius?: number;
 }
 
 
@@ -156,8 +158,14 @@ export const ChristmasElements = ({
   easing = 'easeInOut', 
   speed = 1,
   scatterShape = 'sphere',
-  gatherShape = 'direct'
+  gatherShape = 'direct',
+  treeHeight,
+  treeRadius
 }: ChristmasElementsProps) => {
+  // TODO: 后续重构内部函数以使用这些动态值
+  const _actualHeight = treeHeight ?? CONFIG.tree.height;
+  const _actualRadius = treeRadius ?? CONFIG.tree.radius;
+  void _actualHeight; void _actualRadius; // 暂时忽略未使用警告
   // 合并自定义颜色
   const colors = useMemo(() => ({
     ...DEFAULT_COLORS,

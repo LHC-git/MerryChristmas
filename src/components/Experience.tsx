@@ -16,6 +16,7 @@ import {
   FallingRibbons,
   GroundFog,
   SpiralRibbon,
+  GlowingStreaks,
   PhotoOrnaments
 } from './three';
 import { HeartParticles } from '../HeartParticles';
@@ -170,6 +171,8 @@ export const Experience = ({
               speed={config.animation?.speed}
               scatterShape={config.animation?.scatterShape}
               gatherShape={config.animation?.gatherShape}
+              treeHeight={config.treeShape?.height}
+              treeRadius={config.treeShape?.radius}
             />
           )}
           <Suspense fallback={null}>
@@ -185,6 +188,8 @@ export const Experience = ({
                 gatherShape={config.animation?.gatherShape}
                 photoScale={config.photoOrnaments?.scale || 1.5}
                 frameColor={config.photoOrnaments?.frameColor || '#FFFFFF'}
+                treeHeight={config.treeShape?.height}
+                treeRadius={config.treeShape?.radius}
               />
             )}
             {safeConfig.elements.enabled && (
@@ -197,6 +202,8 @@ export const Experience = ({
                 speed={config.animation?.speed}
                 scatterShape={config.animation?.scatterShape}
                 gatherShape={config.animation?.gatherShape}
+                treeHeight={config.treeShape?.height}
+                treeRadius={config.treeShape?.radius}
               />
             )}
             {safeConfig.lights.enabled && (
@@ -208,6 +215,8 @@ export const Experience = ({
                 speed={config.animation?.speed}
                 scatterShape={config.animation?.scatterShape}
                 gatherShape={config.animation?.gatherShape}
+                treeHeight={config.treeShape?.height}
+                treeRadius={config.treeShape?.radius}
               />
             )}
             {safeConfig.giftPile.enabled && (
@@ -219,6 +228,8 @@ export const Experience = ({
                 speed={config.animation?.speed}
                 scatterShape={config.animation?.scatterShape}
                 gatherShape={config.animation?.gatherShape}
+                treeHeight={config.treeShape?.height}
+                treeRadius={config.treeShape?.radius}
               />
             )}
             {(config.spiralRibbon?.enabled !== false) && (
@@ -231,15 +242,33 @@ export const Experience = ({
                 double={config.spiralRibbon?.double || false}
                 easing={config.animation?.easing}
                 speed={config.animation?.speed}
+                treeHeight={config.treeShape?.height}
+                treeRadius={config.treeShape?.radius}
               />
             )}
-            <TopStar state={sceneState} avatarUrl={config.topStar?.avatarUrl} />
+            {config.glowingStreaks?.enabled && (
+              <GlowingStreaks
+                count={config.glowingStreaks.count || 5}
+                color={config.glowingStreaks.color || "#FFD700"}
+                speed={config.glowingStreaks.speed || 1}
+                tailLength={config.glowingStreaks.tailLength || 1.2}
+                lineWidth={config.glowingStreaks.lineWidth || 3}
+                treeHeight={config.treeShape?.height}
+                treeRadius={config.treeShape?.radius}
+              />
+            )}
+            <TopStar state={sceneState} avatarUrl={config.topStar?.avatarUrl} treeHeight={config.treeShape?.height} />
           </Suspense>
           {safeConfig.sparkles.enabled && (
             <Sparkles count={safeConfig.sparkles.count} scale={50} size={8} speed={0.4} opacity={0.4} color={CONFIG.colors.silver} />
           )}
           {safeConfig.fog.enabled && (
-            <GroundFog opacity={safeConfig.fog.opacity} color={config.fog?.color} />
+            <GroundFog 
+              opacity={safeConfig.fog.opacity} 
+              color={config.fog?.color}
+              treeHeight={config.treeShape?.height}
+              treeRadius={config.treeShape?.radius}
+            />
           )}
         </group>
       )}

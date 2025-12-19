@@ -125,6 +125,8 @@ interface FoliageProps {
   speed?: number;
   scatterShape?: ScatterShape;
   gatherShape?: GatherShape;
+  treeHeight?: number;
+  treeRadius?: number;
 }
 
 // 种子随机函数
@@ -223,7 +225,9 @@ export const Foliage = ({
   easing = 'easeInOut', 
   speed = 1, 
   scatterShape = 'sphere', 
-  gatherShape = 'direct' 
+  gatherShape = 'direct',
+  treeHeight,
+  treeRadius
 }: FoliageProps) => {
   const materialRef = useRef<any>(null);
   const geometryRef = useRef<THREE.BufferGeometry>(null);
@@ -243,6 +247,10 @@ export const Foliage = ({
   const prevScatterShapeRef = useRef(scatterShape);
   
   // 目标位置和其他数据（不依赖 scatterShape）
+  // 使用自定义尺寸或默认值
+  const actualHeight = treeHeight ?? CONFIG.tree.height;
+  const actualRadius = treeRadius ?? CONFIG.tree.radius;
+
   const { targetPositions, randoms, gatherDelays } = useMemo(() => {
     const targetPositions = new Float32Array(count * 3);
     const randoms = new Float32Array(count);
@@ -252,14 +260,14 @@ export const Foliage = ({
       // 使用种子随机生成确定性的目标位置
       const r1 = seededRandom(i * 5 + 100);
       const r2 = seededRandom(i * 5 + 101);
-      const [tx, ty, tz] = getTreePosition(r1, r2);
+      const [tx, ty, tz] = getTreePosition(r1, r2, actualHeight, actualRadius);
       targetPositions[i * 3] = tx;
       targetPositions[i * 3 + 1] = ty;
       targetPositions[i * 3 + 2] = tz;
       randoms[i] = seededRandom(i * 5 + 102);
       
       // 根据聚合形状计算延迟（0-1范围，值越大越晚开始动画）
-      const normalizedY = (ty + CONFIG.tree.height / 2) / CONFIG.tree.height; // 0=底部, 1=顶部
+      const normalizedY = (ty + actualHeight / 2) / actualHeight; // 0=底部, 1=顶部
       switch (gatherShape) {
         case 'stack':
           // 搭积木：从底部开始，底部先到位，顶部最后
@@ -289,7 +297,7 @@ export const Foliage = ({
           break;
         case 'wave':
           // 波浪：从左到右扫过
-          const normalizedX = (tx + CONFIG.tree.radius) / (2 * CONFIG.tree.radius);
+          const normalizedX = (tx + actualRadius) / (2 * actualRadius);
           gatherDelays[i] = normalizedX * 0.85;
           break;
         case 'direct':
@@ -299,7 +307,7 @@ export const Foliage = ({
       }
     }
     return { targetPositions, randoms, gatherDelays };
-  }, [count, gatherShape]);
+  }, [count, gatherShape, actualHeight, actualRadius]);
 
   // 初始化 chaos 位置
   const positions = useMemo(() => {

@@ -8,4 +8,5 @@ export { GiftPile } from './GiftPile';
 export { FallingRibbons } from './FallingRibbons';
 export { GroundFog } from './GroundFog';
 export { SpiralRibbon } from './SpiralRibbon';
+export { GlowingStreaks } from './GlowingStreaks';
 export { PhotoOrnaments, photoScreenPositions } from './PhotoOrnaments';

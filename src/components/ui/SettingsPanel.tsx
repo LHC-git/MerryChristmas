@@ -380,6 +380,57 @@ export const SettingsPanel = ({
       </CollapsibleSection>
 
       {/* 树叶 */}
+      {/* 树形尺寸 */}
+      <CollapsibleSection title="树形尺寸" icon={<TreePine size={14} />}>
+        <p style={{ fontSize: '10px', color: '#888', margin: '0 0 8px 0' }}>
+          调整圣诞树的高度和底部宽度
+        </p>
+        
+        {/* 高度 */}
+        <div style={labelStyle}>
+          <span>树高度: {config.treeShape?.height || 22}</span>
+        </div>
+        <input
+          type="range"
+          min="15"
+          max="35"
+          step="1"
+          value={config.treeShape?.height || 22}
+          onChange={e => onChange({
+            ...config,
+            treeShape: { 
+              height: Number(e.target.value),
+              radius: config.treeShape?.radius || 9
+            }
+          })}
+          style={sliderStyle}
+        />
+        
+        {/* 底部半径 */}
+        <div style={{ ...labelStyle, marginTop: '8px' }}>
+          <span>底部宽度: {config.treeShape?.radius || 9}</span>
+        </div>
+        <input
+          type="range"
+          min="5"
+          max="15"
+          step="0.5"
+          value={config.treeShape?.radius || 9}
+          onChange={e => onChange({
+            ...config,
+            treeShape: { 
+              height: config.treeShape?.height || 22,
+              radius: Number(e.target.value)
+            }
+          })}
+          style={sliderStyle}
+        />
+        
+        <p style={{ fontSize: '9px', color: '#666', margin: '8px 0 0 0' }}>
+          提示：修改尺寸后需要切换聚合/散开才能看到效果
+        </p>
+      </CollapsibleSection>
+
       <CollapsibleSection title="树叶粒子" icon={<TreeDeciduous size={14} />}>
         <div style={labelStyle}>
           <span>显示树叶</span>
@@ -1200,6 +1251,119 @@ export const SettingsPanel = ({
             <p style={{ fontSize: '9px', color: '#666', margin: '4px 0 0 0' }}>
               双层会显示两条交错的带子（红+金）
             </p>
+          </>
+        )}
+      </CollapsibleSection>
+
+      {/* 发光流线 */}
+      <CollapsibleSection title="发光流线" icon={<Sparkles size={14} />}>
+        <p style={{ fontSize: '10px', color: '#888', margin: '0 0 8px 0' }}>
+          动态发光线条环绕圣诞树飞舞
+        </p>
+        <div style={labelStyle}>
+          <span>启用流线</span>
+          <input 
+            type="checkbox" 
+            checked={config.glowingStreaks?.enabled || false} 
+            onChange={e => onChange({ 
+              ...config, 
+              glowingStreaks: { 
+                ...config.glowingStreaks,
+                enabled: e.target.checked,
+                count: config.glowingStreaks?.count || 5,
+                color: config.glowingStreaks?.color || '#FFD700',
+                speed: config.glowingStreaks?.speed || 1,
+                tailLength: config.glowingStreaks?.tailLength || 1.2,
+                lineWidth: config.glowingStreaks?.lineWidth || 3
+              } 
+            })} 
+            style={{ accentColor: '#FFD700' }} 
+          />
+        </div>
+        
+        {config.glowingStreaks?.enabled && (
+          <>
+            {/* 颜色 */}
+            <div style={{ marginTop: '8px' }}>
+              <span style={{ fontSize: '10px', color: '#888' }}>流线颜色</span>
+              <input
+                type="color"
+                value={config.glowingStreaks?.color || '#FFD700'}
+                onChange={e => onChange({
+                  ...config,
+                  glowingStreaks: { ...config.glowingStreaks!, color: e.target.value }
+                })}
+                style={{ width: '100%', height: '28px', cursor: 'pointer', border: 'none', borderRadius: '4px' }}
+              />
+            </div>
+            
+            {/* 数量 */}
+            <div style={{ ...labelStyle, marginTop: '10px' }}>
+              <span>流线数量: {config.glowingStreaks?.count || 5}</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              step="1"
+              value={config.glowingStreaks?.count || 5}
+              onChange={e => onChange({
+                ...config,
+                glowingStreaks: { ...config.glowingStreaks!, count: Number(e.target.value) }
+              })}
+              style={sliderStyle}
+            />
+            
+            {/* 速度 */}
+            <div style={{ ...labelStyle, marginTop: '8px' }}>
+              <span>飞行速度: {(config.glowingStreaks?.speed || 1).toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.3"
+              max="3"
+              step="0.1"
+              value={config.glowingStreaks?.speed || 1}
+              onChange={e => onChange({
+                ...config,
+                glowingStreaks: { ...config.glowingStreaks!, speed: Number(e.target.value) }
+              })}
+              style={sliderStyle}
+            />
+            
+            {/* 拖尾长度 */}
+            <div style={{ ...labelStyle, marginTop: '8px' }}>
+              <span>拖尾长度: {(config.glowingStreaks?.tailLength || 1.2).toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.3"
+              max="2.5"
+              step="0.1"
+              value={config.glowingStreaks?.tailLength || 1.2}
+              onChange={e => onChange({
+                ...config,
+                glowingStreaks: { ...config.glowingStreaks!, tailLength: Number(e.target.value) }
+              })}
+              style={sliderStyle}
+            />
+            
+            {/* 线条粗细 */}
+            <div style={{ ...labelStyle, marginTop: '8px' }}>
+              <span>线条粗细: {config.glowingStreaks?.lineWidth || 3}</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="8"
+              step="1"
+              value={config.glowingStreaks?.lineWidth || 3}
+              onChange={e => onChange({
+                ...config,
+                glowingStreaks: { ...config.glowingStreaks!, lineWidth: Number(e.target.value) }
+              })}
+              style={sliderStyle}
+            />
           </>
         )}
       </CollapsibleSection>

@@ -125,6 +125,8 @@ interface GiftPileProps {
   speed?: number;
   scatterShape?: ScatterShape;
   gatherShape?: GatherShape;
+  treeHeight?: number;
+  treeRadius?: number;
 }
 
 const DEFAULT_GIFT_COLORS = ['#D32F2F', '#FFD700', '#1976D2', '#2E7D32'];
@@ -136,8 +138,14 @@ export const GiftPile = ({
   easing = 'easeInOut',
   speed = 1,
   scatterShape = 'sphere',
-  gatherShape = 'direct'
+  gatherShape = 'direct',
+  treeHeight,
+  treeRadius
 }: GiftPileProps) => {
+  // TODO: 后续重构内部函数以使用这些动态值
+  const _actualHeight = treeHeight ?? CONFIG.tree.height;
+  const _actualRadius = treeRadius ?? CONFIG.tree.radius;
+  void _actualHeight; void _actualRadius; // 暂时忽略未使用警告
   const giftColors = colors && colors.length > 0 ? colors : DEFAULT_GIFT_COLORS;
   const groupRef = useRef<THREE.Group>(null);
   const progressRef = useRef(0);
