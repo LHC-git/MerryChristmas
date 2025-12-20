@@ -8,8 +8,6 @@ interface GroundFogProps {
   color?: string;
   treeHeight?: number;
   treeRadius?: number;
-  showGround?: boolean;
-  groundColor?: string;
   count?: number;      // 粒子数量
   size?: number;       // 粒子大小
   spread?: number;     // 范围倍数
@@ -21,8 +19,6 @@ export const GroundFog = ({
   color = '#ffffff',
   treeHeight,
   treeRadius,
-  showGround = true,
-  groundColor = '#1a1a2e',
   count = 800,
   size = 0.8,
   spread = 1,
@@ -39,9 +35,10 @@ export const GroundFog = ({
   const groundY = -actualHeight / 2 - 3.5;
   
   // 生成粒子位置和随机值
-  const { positions, randoms } = useMemo(() => {
+  const { positions, randoms, baseY } = useMemo(() => {
     const pos = new Float32Array(count * 3);
     const rnd = new Float32Array(count);
+    const baseYArr = new Float32Array(count);
     
     for (let i = 0; i < count; i++) {
       // 在圆形区域内随机分布
@@ -49,13 +46,16 @@ export const GroundFog = ({
       const radius = Math.sqrt(Math.random()) * groundSize * 1.2;
       
       pos[i * 3] = Math.cos(angle) * radius;
-      pos[i * 3 + 1] = groundY + Math.random() * height - height * 0.3;
+      // 粒子只在地板下方，不往上飘
+      const yOffset = Math.random() * height * 0.5;
+      pos[i * 3 + 1] = groundY - yOffset;
       pos[i * 3 + 2] = Math.sin(angle) * radius;
       
       rnd[i] = Math.random();
+      baseYArr[i] = groundY - yOffset;
     }
     
-    return { positions: pos, randoms: rnd };
+    return { positions: pos, randoms: rnd, baseY: baseYArr };
   }, [groundSize, groundY, count, height]);
 
   useFrame((state) => {
@@ -73,8 +73,8 @@ export const GroundFog = ({
       posArray[i3] += Math.sin(time * 0.3 + rnd * 10) * 0.002;
       posArray[i3 + 2] += Math.cos(time * 0.3 + rnd * 10) * 0.002;
       
-      // 垂直浮动
-      posArray[i3 + 1] = groundY + Math.sin(time * 0.5 + rnd * 6) * (height * 0.4);
+      // 垂直浮动 - 只在地板下方小范围浮动
+      posArray[i3 + 1] = baseY[i] + Math.sin(time * 0.5 + rnd * 6) * 0.3;
       
       // 边界检查，超出范围则重置
       const dist = Math.sqrt(posArray[i3] ** 2 + posArray[i3 + 2] ** 2);
@@ -96,23 +96,8 @@ export const GroundFog = ({
 
   return (
     <group>
-      {/* 实体地板 */}
-      {showGround && (
-        <mesh position={[0, groundY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[groundSize, 64]} />
-          <meshStandardMaterial
-            color={groundColor}
-            roughness={0.8}
-            metalness={0.2}
-            polygonOffset={true}
-            polygonOffsetFactor={1}
-            polygonOffsetUnits={1}
-          />
-        </mesh>
-      )}
-      
-      {/* 雾气粒子效果 */}
-      <points ref={pointsRef}>
+      {/* 雾气粒子效果 - renderOrder 设为负数确保在其他物体后面渲染 */}
+      <points ref={pointsRef} renderOrder={-10}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
@@ -126,6 +111,7 @@ export const GroundFog = ({
           transparent
           opacity={opacity * 0.6}
           depthWrite={false}
+          depthTest={true}
           sizeAttenuation
         />
       </points>

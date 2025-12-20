@@ -208,6 +208,19 @@ export const Experience = ({
       {/* 圣诞树主体 - 特效时隐藏 */}
       {!hideTree && (
         <group position={[0, -6, 0]}>
+          {/* 底部雾气 - 放在最前面渲染，确保在树叶后面 */}
+          {safeConfig.fog.enabled && (
+            <GroundFog 
+              opacity={safeConfig.fog.opacity} 
+              color={config.fog?.color}
+              treeHeight={config.treeShape?.height}
+              treeRadius={config.treeShape?.radius}
+              count={config.fog?.count}
+              size={config.fog?.size}
+              spread={config.fog?.spread}
+              height={config.fog?.height}
+            />
+          )}
           {safeConfig.foliage.enabled && (
             <Foliage 
               state={sceneState} 
@@ -313,18 +326,6 @@ export const Experience = ({
           </Suspense>
           {safeConfig.sparkles.enabled && (
             <Sparkles count={safeConfig.sparkles.count} scale={50} size={8} speed={0.4} opacity={0.4} color={CONFIG.colors.silver} />
-          )}
-          {safeConfig.fog.enabled && (
-            <GroundFog 
-              opacity={safeConfig.fog.opacity} 
-              color={config.fog?.color}
-              treeHeight={config.treeShape?.height}
-              treeRadius={config.treeShape?.radius}
-              count={config.fog?.count}
-              size={config.fog?.size}
-              spread={config.fog?.spread}
-              height={config.fog?.height}
-            />
           )}
         </group>
       )}
