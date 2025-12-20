@@ -2,6 +2,7 @@ import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame, useThree, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useEffect as useEffectReact } from 'react';
+import { isMobile } from './utils/helpers';
 void useEffectReact; // 避免重复导入警告
 
 interface HeartParticlesProps {
@@ -109,7 +110,8 @@ const PhotoFrame = ({
   opacity, 
   scale,
   frameColor = '#FFFFFF',
-  frameWidth = 0.15
+  frameWidth = 0.15,
+  isMobileDevice = false
 }: { 
   photoUrl: string; 
   offsetX: number; 
@@ -117,10 +119,12 @@ const PhotoFrame = ({
   scale: number;
   frameColor?: string;
   frameWidth?: number;
+  isMobileDevice?: boolean;
 }) => {
   const texture = useLoader(THREE.TextureLoader, photoUrl);
+  const [dimensions, setDimensions] = useState({ width: 4, height: 5 });
   
-  // 优化纹理设置，提高清晰度
+  // 优化纹理设置，提高清晰度，并计算实际宽高比
   useEffect(() => {
     if (texture) {
       texture.minFilter = THREE.LinearFilter;
@@ -128,13 +132,48 @@ const PhotoFrame = ({
       texture.generateMipmaps = false;
       texture.anisotropy = 16;
       texture.needsUpdate = true;
+      
+      // 根据图片实际宽高比计算显示尺寸
+      const image = texture.image;
+      if (image && image.width && image.height) {
+        const aspectRatio = image.width / image.height;
+        // 移动端使用更小的基础尺寸，防止溢出
+        const baseSize = isMobileDevice ? 3 : 4.5;
+        // 限制最大宽高，防止超大图片溢出屏幕
+        const maxWidth = isMobileDevice ? 4 : 6;
+        const maxHeight = isMobileDevice ? 5 : 7;
+        
+        let photoWidth: number, photoHeight: number;
+        if (aspectRatio >= 1) {
+          // 横图
+          photoWidth = baseSize * Math.sqrt(aspectRatio);
+          photoHeight = baseSize / Math.sqrt(aspectRatio);
+        } else {
+          // 竖图
+          photoWidth = baseSize * Math.sqrt(aspectRatio);
+          photoHeight = baseSize / Math.sqrt(aspectRatio);
+        }
+        
+        // 限制最大尺寸
+        if (photoWidth > maxWidth) {
+          const ratio = maxWidth / photoWidth;
+          photoWidth = maxWidth;
+          photoHeight *= ratio;
+        }
+        if (photoHeight > maxHeight) {
+          const ratio = maxHeight / photoHeight;
+          photoHeight = maxHeight;
+          photoWidth *= ratio;
+        }
+        
+        setDimensions({ width: photoWidth, height: photoHeight });
+      }
     }
-  }, [texture]);
+  }, [texture, isMobileDevice]);
   
   if (!texture) return null;
   
-  const photoWidth = 4;
-  const photoHeight = 5;
+  const { width: photoWidth, height: photoHeight } = dimensions;
   const totalWidth = photoWidth + frameWidth * 2;
   const totalHeight = photoHeight + frameWidth * 2;
   
@@ -186,7 +225,8 @@ const PhotoCarousel = ({
   progress,
   interval = 3000,
   photoScale = 1,
-  frameColor = '#FFFFFF'
+  frameColor = '#FFFFFF',
+  isMobileDevice = false
 }: { 
   photos: string[]; 
   visible: boolean; 
@@ -194,6 +234,7 @@ const PhotoCarousel = ({
   interval?: number;
   photoScale?: number;
   frameColor?: string;
+  isMobileDevice?: boolean;
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const currentIndexRef = useRef(0);
@@ -263,7 +304,9 @@ const PhotoCarousel = ({
   
   const baseScale = progress * 0.8 * photoScale;
   const baseOpacity = progress * 0.95;
-  const slideOffset = slideProgress * 6;
+  // 移动端滑动距离更小
+  const slideDistance = isMobileDevice ? 4 : 6;
+  const slideOffset = slideProgress * slideDistance;
   
   const nextIndex = (displayIndex + 1) % photos.length;
   
@@ -275,14 +318,16 @@ const PhotoCarousel = ({
         opacity={baseOpacity * (1 - slideProgress * 0.5)}
         scale={baseScale}
         frameColor={frameColor}
+        isMobileDevice={isMobileDevice}
       />
       {isSliding && photos.length > 1 && (
         <PhotoFrame
           photoUrl={photos[nextIndex]}
-          offsetX={6 - slideOffset}
+          offsetX={slideDistance - slideOffset}
           opacity={baseOpacity * slideProgress}
           scale={baseScale}
           frameColor={frameColor}
+          isMobileDevice={isMobileDevice}
         />
       )}
     </group>
@@ -677,6 +722,7 @@ export const HeartParticles = ({
           interval={photoInterval}
           photoScale={photoScale}
           frameColor={frameColor}
+          isMobileDevice={isMobile()}
         />
       ) : centerPhoto ? (
         <PhotoCarousel 
@@ -685,6 +731,7 @@ export const HeartParticles = ({
           progress={progress}
           photoScale={photoScale}
           frameColor={frameColor}
+          isMobileDevice={isMobile()}
         />
       ) : null}
     </group>
