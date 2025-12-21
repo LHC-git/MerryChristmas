@@ -103,15 +103,21 @@ export function useTimeline(
   // 计算步骤的实际持续时间
   const getStepDuration = useCallback((step: TimelineStep): number => {
     // 爱心步骤：如果显示照片，需要足够时间展示所有照片
-    if (step.type === 'heart' && step.showPhoto && totalPhotos > 0) {
-      const gatherTime = 2000;
-      const slideTime = 600;
-      const lastPhotoExtraTime = 1000;
-      const calculatedDuration = gatherTime + 
-        (totalPhotos * photoInterval) + 
-        ((totalPhotos - 1) * slideTime) + 
-        lastPhotoExtraTime;
-      return Math.max(step.duration, calculatedDuration);
+    if (step.type === 'heart' && step.showPhoto) {
+      if (totalPhotos > 0) {
+        const gatherTime = 2000;
+        const slideTime = 600;
+        const lastPhotoExtraTime = 1000;
+        const calculatedDuration = gatherTime + 
+          (totalPhotos * photoInterval) + 
+          ((totalPhotos - 1) * slideTime) + 
+          lastPhotoExtraTime;
+        return Math.max(step.duration, calculatedDuration);
+      } else {
+        // 照片还没加载时，给一个较长的默认时间
+        // 这样即使照片加载慢，爱心特效也不会太快消失
+        return Math.max(step.duration, 8000);
+      }
     }
     
     // 文字步骤：直接使用用户设置的 duration
