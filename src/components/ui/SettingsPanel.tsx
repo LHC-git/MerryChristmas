@@ -5,6 +5,7 @@ import { PRESET_MUSIC } from '../../types';
 import { isMobile } from '../../utils/helpers';
 import { TITLE_FONTS } from './TitleOverlay';
 import { TimelineEditor } from './TimelineEditor';
+import { VisualEnhancementsSettings } from './VisualEnhancementsSettings';
 import { 
   TreePine, Sparkles, Heart, Type, X, Settings,
   TreeDeciduous, Lightbulb, Gift, Ribbon, Snowflake, CloudFog, Star, Rainbow, Bot, Hand, Music, Upload, Zap, Palette,
@@ -1916,6 +1917,18 @@ export const SettingsPanel = ({
           </>
         )}
       </CollapsibleSection>
+
+      {/* 视觉增强效果 */}
+      <VisualEnhancementsSettings
+        bells={config.bells}
+        shootingStars={config.shootingStars}
+        aurora={config.aurora}
+        fireworks={config.fireworks}
+        onBellsChange={(bells) => onChange({ ...config, bells })}
+        onShootingStarsChange={(shootingStars) => onChange({ ...config, shootingStars })}
+        onAuroraChange={(aurora) => onChange({ ...config, aurora })}
+        onFireworksChange={(fireworks) => onChange({ ...config, fireworks })}
+      />
 
       {/* 树顶星星/头像 */}
       <CollapsibleSection title="树顶星星" icon={<Star size={14} />}>

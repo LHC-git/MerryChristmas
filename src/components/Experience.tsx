@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Stars, Sparkles } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
-import { CONFIG } from '../config';
+import { CONFIG, DEFAULT_BELL_CONFIG, DEFAULT_SHOOTING_STARS_CONFIG, DEFAULT_AURORA_CONFIG, DEFAULT_FIREWORKS_CONFIG } from '../config';
 import { isMobile, isTablet } from '../utils/helpers';
 import type { SceneState, SceneConfig } from '../types';
 import {
@@ -17,7 +17,12 @@ import {
   GroundFog,
   SpiralRibbon,
   GlowingStreaks,
-  PhotoOrnaments
+  PhotoOrnaments,
+  BellOrnaments,
+  ShootingStars,
+  Aurora,
+  Fireworks,
+  GiftBox
 } from './three';
 import { HeartParticles } from '../HeartParticles';
 import { TextParticles } from '../TextParticles';
@@ -41,6 +46,17 @@ interface ExperienceProps {
   heartBottomText?: string; // 爱心特效底部文字
   palmMove?: { x: number; y: number }; // 手掌滑动控制视角
   onHeartPaused?: (paused: boolean) => void; // 爱心特效暂停状态回调
+  fireworkTrigger?: boolean; // 烟花触发信号
+  onFireworkTriggered?: () => void; // 烟花触发后回调
+  // 礼物步骤
+  showGiftBox?: boolean;
+  giftBoxConfig?: {
+    boxColor?: string;
+    ribbonColor?: string;
+  };
+  isGiftWaiting?: boolean;
+  isGiftOpen?: boolean;
+  onGiftOpen?: () => void;
 }
 
 export const Experience = ({
@@ -60,7 +76,14 @@ export const Experience = ({
   heartPhotoInterval = 3000,
   heartBottomText,
   palmMove,
-  onHeartPaused
+  onHeartPaused,
+  fireworkTrigger,
+  onFireworkTriggered,
+  showGiftBox = false,
+  giftBoxConfig,
+  isGiftWaiting = false,
+  isGiftOpen = false,
+  onGiftOpen
 }: ExperienceProps) => {
   const controlsRef = useRef<any>(null);
   const mobile = isMobile();
@@ -179,6 +202,41 @@ export const Experience = ({
           saturation={0} 
           fade 
           speed={1} 
+        />
+      )}
+      
+      {/* 流星效果 */}
+      {(config.shootingStars?.enabled ?? DEFAULT_SHOOTING_STARS_CONFIG.enabled) && (
+        <ShootingStars
+          config={{
+            ...DEFAULT_SHOOTING_STARS_CONFIG,
+            ...config.shootingStars,
+            enabled: true
+          }}
+        />
+      )}
+      
+      {/* 极光背景 */}
+      {(config.aurora?.enabled ?? DEFAULT_AURORA_CONFIG.enabled) && (
+        <Aurora
+          config={{
+            ...DEFAULT_AURORA_CONFIG,
+            ...config.aurora,
+            enabled: true
+          }}
+        />
+      )}
+      
+      {/* 烟花效果 */}
+      {(config.fireworks?.enabled ?? DEFAULT_FIREWORKS_CONFIG.enabled) && (
+        <Fireworks
+          config={{
+            ...DEFAULT_FIREWORKS_CONFIG,
+            ...config.fireworks,
+            enabled: true
+          }}
+          trigger={fireworkTrigger}
+          onTriggerConsumed={onFireworkTriggered}
         />
       )}
 
@@ -309,6 +367,19 @@ export const Experience = ({
                 treeRadius={config.treeShape?.radius}
               />
             )}
+            {/* 3D 铃铛装饰 */}
+            {(config.bells?.enabled ?? DEFAULT_BELL_CONFIG.enabled) && (
+              <BellOrnaments
+                config={{
+                  ...DEFAULT_BELL_CONFIG,
+                  ...config.bells,
+                  enabled: true
+                }}
+                state={sceneState}
+                treeHeight={config.treeShape?.height}
+                treeRadius={config.treeShape?.radius}
+              />
+            )}
             <TopStar state={sceneState} avatarUrl={config.topStar?.avatarUrl} treeHeight={config.treeShape?.height} />
           </Suspense>
           {safeConfig.sparkles.enabled && (
@@ -346,6 +417,17 @@ export const Experience = ({
         color={config.textEffect?.color || "#FFD700"}
         size={config.textEffect?.size}
       />
+
+      {/* 礼物步骤 - 3D 礼物盒 */}
+      {showGiftBox && onGiftOpen && (
+        <GiftBox
+          boxColor={giftBoxConfig?.boxColor}
+          ribbonColor={giftBoxConfig?.ribbonColor}
+          isWaiting={isGiftWaiting}
+          isOpen={isGiftOpen}
+          onOpen={onGiftOpen}
+        />
+      )}
 
       {safeConfig.bloom.enabled && (
         <EffectComposer 

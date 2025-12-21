@@ -25,6 +25,7 @@ export interface ShareData {
   createdAt: number;
   updatedAt: number;
   expiresAt: number;
+  voiceUrls?: string[];  // 语音祝福音频 Base64 数据列表
 }
 
 // 本地存储的分享信息
@@ -123,15 +124,19 @@ export const uploadShare = async (
     const now = Date.now();
     const expiresAt = now + 7 * 24 * 60 * 60 * 1000; // 7天后过期
 
+    // 提取语音数据
+    const { voiceUrls, cleanConfig } = extractVoiceDataFromConfig(config);
+
     const shareData: ShareData = {
       id: shareId,
       editToken,
       photos,
-      config,
+      config: cleanConfig,
       message,
       createdAt: now,
       updatedAt: now,
-      expiresAt
+      expiresAt,
+      voiceUrls: voiceUrls.length > 0 ? voiceUrls : undefined
     };
 
     // 上传到 R2（通过 Worker 代理）
@@ -190,12 +195,17 @@ export const updateShare = async (
     }
 
     const now = Date.now();
+    
+    // 提取语音数据
+    const { voiceUrls, cleanConfig } = extractVoiceDataFromConfig(config);
+    
     const updatedData: ShareData = {
       ...existing,
       photos,
-      config,
+      config: cleanConfig,
       message,
-      updatedAt: now
+      updatedAt: now,
+      voiceUrls: voiceUrls.length > 0 ? voiceUrls : undefined
     };
 
     const response = await fetch(`${R2_API_URL}/shares/${shareId}.json`, {
@@ -239,6 +249,11 @@ export const getShare = async (shareId: string): Promise<ShareData | null> => {
     // 检查是否过期
     if (data.expiresAt < Date.now()) {
       return null;
+    }
+
+    // 还原语音数据到配置中
+    if (data.voiceUrls && data.voiceUrls.length > 0) {
+      data.config = restoreVoiceDataToConfig(data.config, data.voiceUrls);
     }
 
     return data;
@@ -428,4 +443,91 @@ export const deleteShare = async (
       error: error instanceof Error ? error.message : '删除失败'
     };
   }
+};
+
+/**
+ * 将音频 Blob 转换为 Base64
+ */
+export const audioToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+/**
+ * 将 Base64 转换为音频 Blob
+ */
+export const base64ToAudioBlob = (base64: string): Blob => {
+  const parts = base64.split(';base64,');
+  const contentType = parts[0].split(':')[1] || 'audio/webm';
+  const raw = window.atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+  
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+  
+  return new Blob([uInt8Array], { type: contentType });
+};
+
+/**
+ * 从配置中提取语音数据
+ * 返回 voiceUrls 数组和清理后的配置（移除 audioData）
+ */
+export const extractVoiceDataFromConfig = (config: Record<string, unknown>): {
+  voiceUrls: string[];
+  cleanConfig: Record<string, unknown>;
+} => {
+  const voiceUrls: string[] = [];
+  const cleanConfig = JSON.parse(JSON.stringify(config)); // 深拷贝
+  
+  // 检查 timeline.steps 中的 voice 步骤
+  const timeline = cleanConfig.timeline as { steps?: Array<{ type: string; audioData?: string; audioUrl?: string }> } | undefined;
+  if (timeline?.steps) {
+    timeline.steps.forEach((step, index) => {
+      if (step.type === 'voice' && step.audioData) {
+        // 将 audioData 存储到 voiceUrls 数组
+        voiceUrls[index] = step.audioData;
+        // 从配置中移除 audioData，添加索引引用
+        delete step.audioData;
+        step.audioUrl = `voice:${index}`; // 使用特殊标记表示引用 voiceUrls
+      }
+    });
+  }
+  
+  return { voiceUrls, cleanConfig };
+};
+
+/**
+ * 将语音数据还原到配置中
+ */
+export const restoreVoiceDataToConfig = (
+  config: Record<string, unknown>,
+  voiceUrls?: string[]
+): Record<string, unknown> => {
+  if (!voiceUrls || voiceUrls.length === 0) return config;
+  
+  const restoredConfig = JSON.parse(JSON.stringify(config)); // 深拷贝
+  
+  // 检查 timeline.steps 中的 voice 步骤
+  const timeline = restoredConfig.timeline as { steps?: Array<{ type: string; audioData?: string; audioUrl?: string }> } | undefined;
+  if (timeline?.steps) {
+    timeline.steps.forEach((step) => {
+      if (step.type === 'voice' && step.audioUrl?.startsWith('voice:')) {
+        const voiceIndex = parseInt(step.audioUrl.split(':')[1], 10);
+        if (voiceUrls[voiceIndex]) {
+          step.audioData = voiceUrls[voiceIndex];
+          delete step.audioUrl;
+        }
+      }
+    });
+  }
+  
+  return restoredConfig;
 };

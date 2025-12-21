@@ -12,3 +12,7 @@ export { IntroOverlay } from './IntroOverlay';
 export { CenterPhoto } from './CenterPhoto';
 export { TimelineEditor } from './TimelineEditor';
 export { CSSTextEffect } from './CSSTextEffect';
+export { GiftStepOverlay } from './GiftStepOverlay';
+export { VoiceRecorder } from './VoiceRecorder';
+export { VoicePlayer } from './VoicePlayer';
+export { VisualEnhancementsSettings } from './VisualEnhancementsSettings';

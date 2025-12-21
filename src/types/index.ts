@@ -139,6 +139,49 @@ export interface GlowingStreaksConfig {
   lineWidth: number;       // 线条粗细 1-8
 }
 
+// ============ 视觉增强配置 ============
+
+// 3D 铃铛装饰配置
+export interface BellConfig {
+  enabled: boolean;
+  count: number;           // 铃铛数量 5-20
+  size: number;            // 大小倍数 0.5-2
+  color: string;           // 金属颜色 (金色/银色/铜色)
+  swingAmplitude: number;  // 摆动幅度 0.1-0.5
+  swingSpeed: number;      // 摆动速度 0.5-2
+}
+
+// 流星效果配置
+export interface ShootingStarsConfig {
+  enabled: boolean;
+  frequency: [number, number];  // 出现间隔范围 [min, max] 秒
+  speed: number;                // 移动速度 1-5
+  trailLength: number;          // 拖尾长度 0.5-2
+  color: string;                // 流星颜色
+  glowIntensity: number;        // 发光强度 0.5-2
+}
+
+// 极光背景配置
+export interface AuroraConfig {
+  enabled: boolean;
+  colors: [string, string, string];  // 三色渐变
+  intensity: number;                  // 亮度 0.3-1
+  waveSpeed: number;                  // 波动速度 0.5-2
+  coverage: number;                   // 覆盖范围 0.3-1
+}
+
+// 烟花效果配置
+export interface FireworksConfig {
+  enabled: boolean;
+  explosionSize: number;      // 爆炸半径 5-20
+  particleCount: number;      // 粒子数量 50-200
+  colors: string[];           // 烟花颜色数组
+  gravity: number;            // 重力强度 0.5-2
+  fadeSpeed: number;          // 消散速度 0.5-2
+  maxConcurrent: number;      // 最大同时数量 1-5
+  triggerGesture?: GestureAction;  // 触发手势
+}
+
 // 树叶粒子配置
 export interface FoliageConfig {
   enabled: boolean;
@@ -209,6 +252,11 @@ export interface SceneConfig {
   treeShape?: { height: number; radius: number };
   spiralRibbon?: SpiralRibbonConfig;  // 螺旋带子配置
   glowingStreaks?: GlowingStreaksConfig;  // 发光流线配置
+  // 视觉增强配置
+  bells?: BellConfig;                 // 3D 铃铛装饰
+  shootingStars?: ShootingStarsConfig; // 流星效果
+  aurora?: AuroraConfig;              // 极光背景
+  fireworks?: FireworksConfig;        // 烟花效果
   topStar?: { avatarUrl?: string };  // 树顶星星头像
   intro?: {                // 开场文案配置
     enabled: boolean;
@@ -247,6 +295,7 @@ export interface ShareData {
   createdAt: number;
   expiresAt: number;
   config: Record<string, unknown>;
+  voiceUrls?: string[];  // 语音祝福音频 URL 列表
 }
 
 // ============ 时间轴/故事线模式 ============
@@ -257,7 +306,9 @@ export type TimelineStepType =
   | 'photo'      // 居中显示照片
   | 'heart'      // 爱心特效
   | 'text'       // 文字特效
-  | 'tree';      // 圣诞树聚合（结束）
+  | 'tree'       // 圣诞树聚合（结束）
+  | 'gift'       // 礼物拆开（等待点击）
+  | 'voice';     // 语音祝福
 
 // 时间轴步骤基础接口
 export interface TimelineStepBase {
@@ -312,8 +363,25 @@ export interface TreeStep extends TimelineStepBase {
   type: 'tree';
 }
 
+// 礼物拆开步骤（等待用户点击）
+export interface GiftStep extends TimelineStepBase {
+  type: 'gift';
+  message: string;            // 祝福语
+  boxColor?: string;          // 礼物盒颜色
+  ribbonColor?: string;       // 丝带颜色
+  messageDuration?: number;   // 祝福语显示时长 (ms)，默认 3000
+}
+
+// 语音祝福步骤
+export interface VoiceStep extends TimelineStepBase {
+  type: 'voice';
+  audioUrl?: string;          // 音频 URL (分享后)
+  audioData?: string;         // 音频 Base64 (本地)
+  showIndicator?: boolean;    // 是否显示播放指示器
+}
+
 // 时间轴步骤联合类型
-export type TimelineStep = IntroStep | PhotoStep | HeartStep | TextStep | TreeStep;
+export type TimelineStep = IntroStep | PhotoStep | HeartStep | TextStep | TreeStep | GiftStep | VoiceStep;
 
 // 时间轴配置
 export interface TimelineConfig {

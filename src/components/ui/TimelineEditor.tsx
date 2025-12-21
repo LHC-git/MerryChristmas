@@ -3,12 +3,16 @@
  * 用于配置故事线模式的步骤
  */
 import React, { useState } from 'react';
-import type { TimelineConfig, TimelineStep, TimelineStepType } from '../../types';
+import { createPortal } from 'react-dom';
+import type { TimelineConfig, TimelineStep, TimelineStepType, GiftStep, VoiceStep } from '../../types';
 import { PRESET_MUSIC } from '../../types';
 import { 
   Play, Pause, Trash2, GripVertical, ChevronUp, ChevronDown,
-  MessageSquare, Image, Heart, Type, TreePine, Music
+  MessageSquare, Image, Heart, Type, TreePine, Music, Gift, Mic, Upload, X
 } from 'lucide-react';
+import { VoiceRecorder } from './VoiceRecorder';
+import { validateAudioFile } from '../../utils/audioValidation';
+import { audioToBase64 } from '../../lib/r2';
 
 // 生成唯一ID
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -19,6 +23,8 @@ const STEP_TYPES: { type: TimelineStepType; label: string; icon: React.ReactNode
   { type: 'photo', label: '照片展示', icon: <Image size={14} />, color: '#2196F3' },
   { type: 'heart', label: '爱心特效', icon: <Heart size={14} />, color: '#E91E63' },
   { type: 'text', label: '文字特效', icon: <Type size={14} />, color: '#FF9800' },
+  { type: 'gift', label: '礼物拆开', icon: <Gift size={14} />, color: '#FF5722' },
+  { type: 'voice', label: '语音祝福', icon: <Mic size={14} />, color: '#00BCD4' },
   { type: 'tree', label: '圣诞树', icon: <TreePine size={14} />, color: '#4CAF50' },
 ];
 
@@ -35,9 +41,233 @@ const createDefaultStep = (type: TimelineStepType): TimelineStep => {
       return { ...base, type: 'heart', duration: 4000, showPhoto: true, photoIndex: -1 };
     case 'text':
       return { ...base, type: 'text', text: 'MERRY CHRISTMAS' };
+    case 'gift':
+      return { ...base, type: 'gift', duration: 0, message: '圣诞快乐！', boxColor: '#E53935', ribbonColor: '#FFD700', messageDuration: 3000 };
+    case 'voice':
+      return { ...base, type: 'voice', duration: 0, showIndicator: true };
     case 'tree':
       return { ...base, type: 'tree', duration: 2000 };
   }
+};
+
+// 语音步骤编辑器子组件
+interface VoiceStepEditorProps {
+  step: VoiceStep;
+  onUpdate: (updates: Partial<VoiceStep>) => void;
+}
+
+const VoiceStepEditor: React.FC<VoiceStepEditorProps> = ({ step, onUpdate }) => {
+  const [showRecorder, setShowRecorder] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+
+  // 处理录制完成
+  const handleRecorded = async (blob: Blob) => {
+    try {
+      const base64 = await audioToBase64(blob);
+      onUpdate({ audioData: base64, audioUrl: undefined });
+      setAudioPreviewUrl(URL.createObjectURL(blob));
+      setShowRecorder(false);
+      setUploadError(null);
+    } catch {
+      setUploadError('录音保存失败');
+    }
+  };
+
+  // 处理文件上传
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError(null);
+    const validation = await validateAudioFile(file);
+    
+    if (!validation.valid) {
+      setUploadError(validation.error || '文件验证失败');
+      return;
+    }
+
+    try {
+      const base64 = await audioToBase64(file);
+      onUpdate({ audioData: base64, audioUrl: undefined });
+      setAudioPreviewUrl(URL.createObjectURL(file));
+    } catch {
+      setUploadError('文件读取失败');
+    }
+  };
+
+  // 清除音频
+  const clearAudio = () => {
+    onUpdate({ audioData: undefined, audioUrl: undefined });
+    setAudioPreviewUrl(null);
+  };
+
+  const hasAudio = step.audioData || step.audioUrl;
+
+  return (
+    <div>
+      <p style={{ fontSize: '10px', color: '#888', margin: '0 0 8px 0' }}>
+        语音祝福最长 60 秒，可录制或上传音频文件
+      </p>
+
+      {/* 已有音频预览 */}
+      {hasAudio && (
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <span style={{ fontSize: '11px', color: '#00BCD4' }}>✓ 已添加语音</span>
+            <button
+              onClick={clearAudio}
+              style={{
+                padding: '2px 8px',
+                background: 'rgba(255,0,0,0.2)',
+                border: '1px solid rgba(255,0,0,0.3)',
+                borderRadius: '4px',
+                color: '#ff6666',
+                fontSize: '10px',
+                cursor: 'pointer'
+              }}
+            >
+              删除
+            </button>
+          </div>
+          {audioPreviewUrl && (
+            <audio src={audioPreviewUrl} controls style={{ width: '100%', height: '32px' }} />
+          )}
+        </div>
+      )}
+
+      {/* 录制/上传按钮 */}
+      {!hasAudio && !showRecorder && (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setShowRecorder(true)}
+            style={{
+              flex: 1,
+              padding: '10px',
+              background: 'rgba(0,188,212,0.2)',
+              border: '1px solid rgba(0,188,212,0.4)',
+              borderRadius: '6px',
+              color: '#00BCD4',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Mic size={14} /> 录制语音
+          </button>
+          <label
+            style={{
+              flex: 1,
+              padding: '10px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '6px',
+              color: '#fff',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Upload size={14} /> 上传文件
+            <input
+              type="file"
+              accept="audio/mp3,audio/wav,audio/m4a,audio/mpeg,audio/x-m4a"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
+      )}
+
+      {/* 录音器弹窗 */}
+      {showRecorder && createPortal(
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            position: 'relative',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <button
+              onClick={() => setShowRecorder(false)}
+              style={{
+                position: 'absolute',
+                top: '-40px',
+                right: '0',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff'
+              }}
+            >
+              <X size={18} />
+            </button>
+            <VoiceRecorder
+              onRecorded={handleRecorded}
+              maxDuration={60}
+              onCancel={() => setShowRecorder(false)}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 错误提示 */}
+      {uploadError && (
+        <div style={{
+          marginTop: '8px',
+          padding: '8px',
+          background: 'rgba(255,0,0,0.1)',
+          border: '1px solid rgba(255,0,0,0.3)',
+          borderRadius: '4px',
+          color: '#ff6666',
+          fontSize: '11px'
+        }}>
+          {uploadError}
+        </div>
+      )}
+
+      {/* 显示指示器选项 */}
+      <label style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '6px', 
+        fontSize: '11px', 
+        marginTop: '10px',
+        color: '#888'
+      }}>
+        <input
+          type="checkbox"
+          checked={step.showIndicator ?? true}
+          onChange={e => onUpdate({ showIndicator: e.target.checked })}
+          style={{ accentColor: '#00BCD4' }}
+        />
+        播放时显示音频指示器
+      </label>
+    </div>
+  );
 };
 
 interface TimelineEditorProps {
@@ -268,7 +498,9 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                       {index + 1}. {stepType?.label}
                     </span>
                     <span style={{ fontSize: '10px', color: '#888', marginRight: '8px' }}>
-                      {(step.duration / 1000).toFixed(1)}s
+                      {step.type === 'gift' || step.type === 'voice' 
+                        ? '等待交互' 
+                        : `${(step.duration / 1000).toFixed(1)}s`}
                     </span>
                     
                     {/* 移动按钮 */}
@@ -316,21 +548,23 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                   {/* 步骤详情 */}
                   {isExpanded && (
                     <div style={{ padding: '8px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                      {/* 通用配置 */}
-                      <div style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '10px', color: '#888' }}>
-                          持续时间: {(step.duration / 1000).toFixed(1)} 秒
-                        </label>
-                        <input
-                          type="range"
-                          min="1000"
-                          max="10000"
-                          step="500"
-                          value={step.duration}
-                          onChange={e => updateStep(step.id, { duration: Number(e.target.value) })}
-                          style={{ width: '100%', accentColor: stepType?.color }}
-                        />
-                      </div>
+                      {/* 通用配置 - 礼物和语音步骤不显示持续时间滑块 */}
+                      {step.type !== 'gift' && step.type !== 'voice' && (
+                        <div style={{ marginBottom: '8px' }}>
+                          <label style={{ fontSize: '10px', color: '#888' }}>
+                            持续时间: {(step.duration / 1000).toFixed(1)} 秒
+                          </label>
+                          <input
+                            type="range"
+                            min="1000"
+                            max="10000"
+                            step="500"
+                            value={step.duration}
+                            onChange={e => updateStep(step.id, { duration: Number(e.target.value) })}
+                            style={{ width: '100%', accentColor: stepType?.color }}
+                          />
+                        </div>
+                      )}
 
                       {/* 类型特定配置 */}
                       {step.type === 'intro' && (
@@ -436,6 +670,72 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                         <p style={{ fontSize: '10px', color: '#888', margin: 0 }}>
                           圣诞树聚合是故事线的结束标志
                         </p>
+                      )}
+
+                      {/* 礼物步骤配置 */}
+                      {step.type === 'gift' && (
+                        <div>
+                          <p style={{ fontSize: '10px', color: '#888', margin: '0 0 8px 0' }}>
+                            礼物步骤会暂停故事线，等待用户点击打开礼物盒
+                          </p>
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ fontSize: '10px', color: '#888' }}>祝福语</label>
+                            <textarea
+                              value={(step as GiftStep).message || ''}
+                              onChange={e => updateStep(step.id, { message: e.target.value })}
+                              placeholder="输入祝福语..."
+                              maxLength={100}
+                              style={{
+                                ...inputStyle,
+                                marginTop: '4px',
+                                minHeight: '60px',
+                                resize: 'vertical'
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: '10px', color: '#888' }}>礼物盒颜色</label>
+                              <input
+                                type="color"
+                                value={(step as GiftStep).boxColor || '#E53935'}
+                                onChange={e => updateStep(step.id, { boxColor: e.target.value })}
+                                style={{ width: '100%', height: '30px', marginTop: '4px', cursor: 'pointer' }}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: '10px', color: '#888' }}>丝带颜色</label>
+                              <input
+                                type="color"
+                                value={(step as GiftStep).ribbonColor || '#FFD700'}
+                                onChange={e => updateStep(step.id, { ribbonColor: e.target.value })}
+                                style={{ width: '100%', height: '30px', marginTop: '4px', cursor: 'pointer' }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10px', color: '#888' }}>
+                              祝福语显示时长: {((step as GiftStep).messageDuration || 3000) / 1000}秒
+                            </label>
+                            <input
+                              type="range"
+                              min="2000"
+                              max="8000"
+                              step="500"
+                              value={(step as GiftStep).messageDuration || 3000}
+                              onChange={e => updateStep(step.id, { messageDuration: Number(e.target.value) })}
+                              style={{ width: '100%', accentColor: '#FF5722' }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 语音步骤配置 */}
+                      {step.type === 'voice' && (
+                        <VoiceStepEditor
+                          step={step as VoiceStep}
+                          onUpdate={(updates) => updateStep(step.id, updates)}
+                        />
                       )}
                     </div>
                   )}

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Experience, GestureController, SettingsPanel, TitleOverlay, Modal, LyricsDisplay, AvatarCropper, IntroOverlay, WelcomeTutorial, PrivacyNotice, CenterPhoto, photoScreenPositions } from './components';
+import { Experience, GestureController, SettingsPanel, TitleOverlay, Modal, LyricsDisplay, AvatarCropper, IntroOverlay, WelcomeTutorial, PrivacyNotice, CenterPhoto, photoScreenPositions, GiftStepOverlay, VoicePlayer } from './components';
 import { CHRISTMAS_MUSIC_URL } from './config';
 import { isMobile, isTablet, fileToBase64, getDefaultSceneConfig, toggleFullscreen, isFullscreen, isFullscreenSupported } from './utils/helpers';
 import { useTimeline } from './hooks/useTimeline';
@@ -309,15 +309,29 @@ export default function GrandTreeApp() {
         setShowHeart(true);
         setHideTree(true);
       }
-      // 其他步骤（intro/photo/tree）- 关闭特效
+      // 礼物步骤 - 隐藏圣诞树，显示礼物盒
+      else if (currentStep?.type === 'gift') {
+        setShowText(false);
+        setShowHeart(false);
+        setHideTree(true);
+      }
+      // 语音步骤 - 隐藏圣诞树
+      else if (currentStep?.type === 'voice') {
+        setShowText(false);
+        setShowHeart(false);
+        setHideTree(true);
+      }
+      // 圣诞树步骤 - 显示圣诞树
+      else if (currentStep?.type === 'tree') {
+        setShowText(false);
+        setShowHeart(false);
+        setHideTree(false);
+      }
+      // 其他步骤（intro/photo）- 隐藏圣诞树
       else {
         setShowText(false);
         setShowHeart(false);
-        if (currentStep?.type !== 'tree') {
-          setHideTree(currentStep?.type === 'intro' || currentStep?.type === 'photo');
-        } else {
-          setHideTree(false);
-        }
+        setHideTree(true);
       }
     }
     
@@ -938,6 +952,26 @@ export default function GrandTreeApp() {
         duration={timeline.state.currentStep?.duration}
       />
 
+      {/* 时间轴模式 - 礼物步骤 */}
+      {timeline.showGift && timeline.giftConfig && (
+        <GiftStepOverlay
+          isWaiting={timeline.isGiftWaiting}
+          isOpen={timeline.isGiftOpen}
+          message={timeline.giftConfig.message}
+          messageDuration={timeline.giftConfig.messageDuration}
+          onMessageComplete={timeline.onGiftMessageComplete}
+        />
+      )}
+
+      {/* 时间轴模式 - 语音步骤 */}
+      <VoicePlayer
+        audioData={timeline.voiceConfig?.audioData}
+        audioUrl={timeline.voiceConfig?.audioUrl}
+        visible={timeline.showVoice}
+        showIndicator={timeline.voiceConfig?.showIndicator}
+        onComplete={timeline.onVoiceComplete}
+      />
+
       {/* 3D Canvas */}
       <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 1 }}>
         <Canvas
@@ -964,13 +998,21 @@ export default function GrandTreeApp() {
             showHeart={showHeart}
             showText={showText}
             customMessage={(sceneConfig.gestureTexts || [sceneConfig.gestureText || 'MERRY CHRISTMAS'])[currentTextIndex] || 'MERRY CHRISTMAS'}
-            hideTree={hideTree}
+            hideTree={hideTree || timeline.showGift || timeline.showVoice}
             heartCount={sceneConfig.gestureEffect?.heartCount || 1500}
             textCount={sceneConfig.gestureEffect?.textCount || 1000}
             heartCenterPhoto={timeline.heartPhotoIndex !== null ? uploadedPhotos[timeline.heartPhotoIndex] : undefined}
             heartCenterPhotos={uploadedPhotos.length > 0 ? uploadedPhotos : undefined}
             heartPhotoInterval={(sceneConfig.heartEffect as { photoInterval?: number } | undefined)?.photoInterval || 3000}
             onHeartPaused={setHeartPaused}
+            showGiftBox={timeline.showGift}
+            giftBoxConfig={timeline.giftConfig ? {
+              boxColor: timeline.giftConfig.boxColor,
+              ribbonColor: timeline.giftConfig.ribbonColor
+            } : undefined}
+            isGiftWaiting={timeline.isGiftWaiting}
+            isGiftOpen={timeline.isGiftOpen}
+            onGiftOpen={timeline.onGiftOpen}
           />
         </Canvas>
       </div>

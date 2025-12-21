@@ -32,5 +32,50 @@ export const CONFIG = {
   tree: { height: 22, radius: 9 }
 };
 
+// ============ 视觉增强默认配置 ============
+
+import type { BellConfig, ShootingStarsConfig, AuroraConfig, FireworksConfig } from '../types';
+
+// 3D 铃铛装饰默认配置
+export const DEFAULT_BELL_CONFIG: BellConfig = {
+  enabled: false,
+  count: 8,
+  size: 1,
+  color: '#FFD700',  // 金色
+  swingAmplitude: 0.2,
+  swingSpeed: 1
+};
+
+// 流星效果默认配置
+export const DEFAULT_SHOOTING_STARS_CONFIG: ShootingStarsConfig = {
+  enabled: false,
+  frequency: [3, 8],  // 3-8 秒出现一次
+  speed: 2,
+  trailLength: 1,
+  color: '#FFFFFF',
+  glowIntensity: 1
+};
+
+// 极光背景默认配置
+export const DEFAULT_AURORA_CONFIG: AuroraConfig = {
+  enabled: false,
+  colors: ['#00FF88', '#00BFFF', '#FF00FF'],  // 绿-蓝-紫
+  intensity: 0.6,
+  waveSpeed: 1,
+  coverage: 0.7
+};
+
+// 烟花效果默认配置
+export const DEFAULT_FIREWORKS_CONFIG: FireworksConfig = {
+  enabled: false,
+  explosionSize: 10,
+  particleCount: 100,
+  colors: ['#FF0000', '#FFD700', '#00FF00', '#00BFFF', '#FF00FF'],
+  gravity: 1,
+  fadeSpeed: 1,
+  maxConcurrent: 3,
+  triggerGesture: undefined
+};
+
 // 圣诞音乐 URL
 export const CHRISTMAS_MUSIC_URL = '/music/mixkit-christmas-stars-866.mp3';

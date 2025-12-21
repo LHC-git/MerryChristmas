@@ -4,7 +4,7 @@
  * 注意：文字/爱心特效的显示由外部 effect 监听 currentStep 来控制
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { TimelineConfig, TimelineStep } from '../types';
+import type { TimelineConfig, TimelineStep, GiftStep, VoiceStep } from '../types';
 
 export interface TimelineState {
   isPlaying: boolean;
@@ -34,6 +34,26 @@ export interface UseTimelineReturn {
   showTree: boolean;
   // 爱心照片索引（外部 effect 使用）
   heartPhotoIndex: number | null;
+  // 礼物步骤状态
+  showGift: boolean;
+  giftConfig: {
+    message: string;
+    boxColor?: string;
+    ribbonColor?: string;
+    messageDuration?: number;
+  } | null;
+  isGiftWaiting: boolean;
+  isGiftOpen: boolean;
+  onGiftOpen: () => void;
+  onGiftMessageComplete: () => void;
+  // 语音步骤状态
+  showVoice: boolean;
+  voiceConfig: {
+    audioUrl?: string;
+    audioData?: string;
+    showIndicator?: boolean;
+  } | null;
+  onVoiceComplete: () => void;
 }
 
 export function useTimeline(
@@ -53,6 +73,10 @@ export function useTimeline(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const photoCounterRef = useRef(0);
+  
+  // 礼物步骤状态
+  const [isGiftWaiting, setIsGiftWaiting] = useState(false);
+  const [giftOpened, setGiftOpened] = useState(false);
 
   // 清理定时器
   const clearTimers = useCallback(() => {
@@ -98,6 +122,8 @@ export function useTimeline(
   // 播放指定步骤
   const playStep = useCallback((index: number) => {
     clearTimers();
+    setIsGiftWaiting(false);
+    setGiftOpened(false);
     
     if (!config?.steps || index < 0 || index >= config.steps.length) {
       setState({
@@ -120,6 +146,23 @@ export function useTimeline(
       currentStep: step,
       progress: 0
     });
+
+    // 礼物步骤：等待用户点击
+    if (step.type === 'gift') {
+      timerRef.current = setTimeout(() => {
+        setIsGiftWaiting(true);
+        // 礼物步骤不自动进度，等待用户交互
+      }, delay);
+      return;
+    }
+
+    // 语音步骤：等待音频播放完成
+    if (step.type === 'voice') {
+      timerRef.current = setTimeout(() => {
+        // 语音步骤不自动进度，等待 onVoiceComplete 回调
+      }, delay);
+      return;
+    }
 
     timerRef.current = setTimeout(() => {
       const startTime = Date.now();
@@ -187,6 +230,28 @@ export function useTimeline(
     playStep(index);
   }, [clearTimers, playStep]);
 
+  // 礼物打开回调
+  const onGiftOpen = useCallback(() => {
+    setGiftOpened(true);
+    setIsGiftWaiting(false);
+  }, []);
+
+  // 礼物消息显示完成回调
+  const onGiftMessageComplete = useCallback(() => {
+    // 进入下一步
+    if (config?.steps && state.currentStepIndex >= 0) {
+      playStep(state.currentStepIndex + 1);
+    }
+  }, [config, state.currentStepIndex, playStep]);
+
+  // 语音播放完成回调
+  const onVoiceComplete = useCallback(() => {
+    // 进入下一步
+    if (config?.steps && state.currentStepIndex >= 0) {
+      playStep(state.currentStepIndex + 1);
+    }
+  }, [config, state.currentStepIndex, playStep]);
+
   // 自动播放
   useEffect(() => {
     if (config?.enabled && config.autoPlay && config.steps?.length) {
@@ -219,6 +284,27 @@ export function useTimeline(
     ? getPhotoIndex(currentStep.photoIndex ?? -1)
     : null;
 
+  // 礼物步骤状态
+  const showGift = isPlaying && currentStep?.type === 'gift';
+  const giftConfig = currentStep?.type === 'gift' 
+    ? {
+        message: (currentStep as GiftStep).message,
+        boxColor: (currentStep as GiftStep).boxColor,
+        ribbonColor: (currentStep as GiftStep).ribbonColor,
+        messageDuration: (currentStep as GiftStep).messageDuration
+      }
+    : null;
+
+  // 语音步骤状态
+  const showVoice = isPlaying && currentStep?.type === 'voice';
+  const voiceConfig = currentStep?.type === 'voice'
+    ? {
+        audioUrl: (currentStep as VoiceStep).audioUrl,
+        audioData: (currentStep as VoiceStep).audioData,
+        showIndicator: (currentStep as VoiceStep).showIndicator
+      }
+    : null;
+
   return {
     state,
     actions: { play, pause, stop, next, prev, goTo },
@@ -228,6 +314,17 @@ export function useTimeline(
     showPhoto,
     photoIndex,
     showTree,
-    heartPhotoIndex
+    heartPhotoIndex,
+    // 礼物步骤
+    showGift,
+    giftConfig,
+    isGiftWaiting,
+    isGiftOpen: giftOpened,
+    onGiftOpen,
+    onGiftMessageComplete,
+    // 语音步骤
+    showVoice,
+    voiceConfig,
+    onVoiceComplete
   };
 }

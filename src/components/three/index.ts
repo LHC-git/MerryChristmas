@@ -10,3 +10,8 @@ export { GroundFog } from './GroundFog';
 export { SpiralRibbon } from './SpiralRibbon';
 export { GlowingStreaks } from './GlowingStreaks';
 export { PhotoOrnaments, photoScreenPositions } from './PhotoOrnaments';
+export { BellOrnaments } from './BellOrnaments';
+export { ShootingStars } from './ShootingStars';
+export { Aurora } from './Aurora';
+export { Fireworks } from './Fireworks';
+export { GiftBox } from './GiftBox';
