@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Experience, GestureController, SettingsPanel, TitleOverlay, Modal, LyricsDisplay, AvatarCropper, IntroOverlay, WelcomeTutorial, PrivacyNotice, CenterPhoto, photoScreenPositions, GiftStepOverlay, VoicePlayer, KeyboardShortcuts } from './components';
+import { Experience, GestureController, SettingsPanel, TitleOverlay, Modal, LyricsDisplay, AvatarCropper, IntroOverlay, WelcomeTutorial, PrivacyNotice, CenterPhoto, photoScreenPositions, GiftStepOverlay, VoicePlayer, KeyboardShortcuts, PhotoManager } from './components';
 import { CHRISTMAS_MUSIC_URL } from './config';
 import { isMobile, isTablet, fileToBase64, getDefaultSceneConfig, toggleFullscreen, isFullscreen, isFullscreenSupported } from './utils/helpers';
 import { useTimeline } from './hooks/useTimeline';
@@ -50,6 +50,7 @@ export default function GrandTreeApp() {
   const [aiStatus, setAiStatus] = useState("INITIALIZING...");
   const [debugMode, setDebugMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPhotoManager, setShowPhotoManager] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(true);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -1208,7 +1209,7 @@ export default function GrandTreeApp() {
 
         {!isShareMode && (
           <>
-            <button onClick={() => fileInputRef.current?.click()} style={buttonStyle(false, mobile)}><Camera size={18} /></button>
+            <button onClick={() => setShowPhotoManager(true)} style={buttonStyle(false, mobile)}><Camera size={18} /></button>
             <button onClick={() => setShowSettings(!showSettings)} style={buttonStyle(showSettings, mobile)}><Settings size={18} /></button>
             <button onClick={() => setDebugMode(!debugMode)} style={buttonStyle(debugMode, mobile)}>
               <Wrench size={18} />
@@ -1363,6 +1364,17 @@ export default function GrandTreeApp() {
       {showKeyboardHelp && !mobile && (
         <KeyboardShortcuts onClose={() => setShowKeyboardHelp(false)} />
       )}
+
+      {/* 照片管理弹窗 */}
+      <PhotoManager
+        photos={uploadedPhotos}
+        onChange={(photos) => {
+          setUploadedPhotos(photos);
+          setRefreshKey(k => k + 1);
+        }}
+        isOpen={showPhotoManager}
+        onClose={() => setShowPhotoManager(false)}
+      />
     </div>
   );
 }

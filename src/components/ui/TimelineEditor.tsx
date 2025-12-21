@@ -185,7 +185,6 @@ const PhotoSelector: React.FC<PhotoSelectorProps> = ({
                 position: 'relative',
                 maxWidth: 'min(90vw, 600px)',
                 maxHeight: 'calc(100vh - 120px)',
-                maxHeight: 'calc(100dvh - 120px)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center'
