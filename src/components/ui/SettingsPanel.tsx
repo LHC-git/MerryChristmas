@@ -381,13 +381,14 @@ interface SettingsPanelProps {
   onAiToggle: (enabled: boolean) => void;
   onAvatarUpload?: (imageUrl: string) => void;  // 头像上传回调
   photoCount?: number;  // 照片数量（用于时间轴编辑器）
+  photoPaths?: string[];  // 照片URL数组（用于预览）
   onTimelinePreview?: () => void;  // 时间轴预览回调
   isTimelinePlaying?: boolean;  // 时间轴是否正在播放
 }
 
 export const SettingsPanel = ({ 
   config, onChange, onClose, aiEnabled, onAiToggle, onAvatarUpload,
-  photoCount = 0, onTimelinePreview, isTimelinePlaying = false
+  photoCount = 0, photoPaths = [], onTimelinePreview, isTimelinePlaying = false
 }: SettingsPanelProps) => {
   const mobile = isMobile();
 
@@ -661,6 +662,7 @@ export const SettingsPanel = ({
           config={config.timeline}
           onChange={(timeline) => onChange({ ...config, timeline })}
           photoCount={photoCount}
+          photoPaths={photoPaths}
           configuredTexts={config.gestureTexts || (config.gestureText ? [config.gestureText] : ['MERRY CHRISTMAS'])}
           textSwitchInterval={config.textSwitchInterval || 3}
           onTextsChange={(texts) => onChange({ ...config, gestureTexts: texts, gestureText: texts[0] })}

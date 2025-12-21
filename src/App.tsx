@@ -1142,6 +1142,7 @@ export default function GrandTreeApp() {
           onAiToggle={setAiEnabled}
           onAvatarUpload={(imageUrl) => setAvatarToCrop(imageUrl)}
           photoCount={uploadedPhotos.length}
+          photoPaths={uploadedPhotos}
           onTimelinePreview={() => {
             if (timeline.state.isPlaying) {
               timeline.actions.stop();

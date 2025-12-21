@@ -8,7 +8,7 @@ import type { TimelineConfig, TimelineStep, TimelineStepType, GiftStep, VoiceSte
 import { PRESET_MUSIC } from '../../types';
 import { 
   Play, Pause, Trash2, GripVertical, ChevronUp, ChevronDown,
-  MessageSquare, Image, Heart, Type, TreePine, Music, Gift, Mic, Upload, X
+  MessageSquare, Image, Heart, Type, TreePine, Music, Gift, Mic, Upload, X, Eye
 } from 'lucide-react';
 import { VoiceRecorder } from './VoiceRecorder';
 import { validateAudioFile } from '../../utils/audioValidation';
@@ -48,6 +48,196 @@ const createDefaultStep = (type: TimelineStepType): TimelineStep => {
     case 'tree':
       return { ...base, type: 'tree', duration: 2000 };
   }
+};
+
+// 照片选择器组件（带预览弹窗）
+interface PhotoSelectorProps {
+  photoIndex: number;
+  photoCount: number;
+  photoPaths: string[]; // 照片URL数组
+  onChange: (index: number) => void;
+}
+
+const PhotoSelector: React.FC<PhotoSelectorProps> = ({
+  photoIndex,
+  photoCount,
+  photoPaths,
+  onChange
+}) => {
+  const [showPreview, setShowPreview] = useState(false);
+
+  const selectStyle: React.CSSProperties = {
+    flex: 1,
+    padding: '6px 8px',
+    background: 'rgba(255,255,255,0.1)',
+    border: '1px solid rgba(255,215,0,0.3)',
+    borderRadius: '4px',
+    color: '#fff',
+    fontSize: '12px',
+    boxSizing: 'border-box',
+    backgroundColor: '#1a1a1a'
+  };
+
+  const optionStyle: React.CSSProperties = {
+    backgroundColor: '#1a1a1a',
+    color: '#fff'
+  };
+
+  // 获取照片URL
+  const getPhotoUrl = (index: number) => {
+    if (index >= 0 && index < photoPaths.length) {
+      return photoPaths[index];
+    }
+    return '';
+  };
+
+  return (
+    <div>
+      <label style={{ fontSize: '10px', color: '#888' }}>选择照片</label>
+      <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
+        <select
+          value={photoIndex}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={selectStyle}
+        >
+          <option value={-1} style={optionStyle}>
+            按顺序自动选择
+          </option>
+          {Array.from({ length: photoCount }, (_, i) => (
+            <option key={i} value={i} style={optionStyle}>
+              照片 {i + 1}
+            </option>
+          ))}
+        </select>
+        {photoIndex >= 0 && photoIndex < photoCount && getPhotoUrl(photoIndex) && (
+          <button
+            onClick={() => setShowPreview(true)}
+            style={{
+              padding: '6px 10px',
+              background: 'rgba(33,150,243,0.2)',
+              border: '1px solid rgba(33,150,243,0.4)',
+              borderRadius: '4px',
+              color: '#2196F3',
+              fontSize: '11px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Eye size={12} /> 预览
+          </button>
+        )}
+      </div>
+
+      {/* 预览弹窗 - 全平台适配 */}
+      {showPreview &&
+        getPhotoUrl(photoIndex) &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.92)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              padding: '16px',
+              boxSizing: 'border-box'
+            }}
+            onClick={() => setShowPreview(false)}
+          >
+            {/* 关闭按钮 - 移动端更大的点击区域 */}
+            <button
+              onClick={() => setShowPreview(false)}
+              style={{
+                position: 'absolute',
+                top: 'max(16px, env(safe-area-inset-top, 16px))',
+                right: 'max(16px, env(safe-area-inset-right, 16px))',
+                background: 'rgba(255,255,255,0.15)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '44px',
+                height: '44px',
+                minWidth: '44px',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff',
+                zIndex: 10001,
+                touchAction: 'manipulation'
+              }}
+            >
+              <X size={24} />
+            </button>
+
+            {/* 图片容器 */}
+            <div
+              style={{
+                position: 'relative',
+                maxWidth: 'min(90vw, 600px)',
+                maxHeight: 'calc(100vh - 120px)',
+                maxHeight: 'calc(100dvh - 120px)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={getPhotoUrl(photoIndex)}
+                alt={`照片 ${photoIndex + 1}`}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: 'calc(100vh - 140px)',
+                  maxHeight: 'calc(100dvh - 140px)',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  borderRadius: '8px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
+                }}
+              />
+              <div
+                style={{
+                  textAlign: 'center',
+                  marginTop: '12px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  padding: '0 16px'
+                }}
+              >
+                照片 {photoIndex + 1}
+              </div>
+            </div>
+
+            {/* 底部提示 - 移动端友好 */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
+                left: 0,
+                right: 0,
+                textAlign: 'center',
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '12px'
+              }}
+            >
+              点击任意位置关闭
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
+  );
 };
 
 // 语音步骤编辑器子组件
@@ -274,6 +464,7 @@ interface TimelineEditorProps {
   config: TimelineConfig | undefined;
   onChange: (config: TimelineConfig) => void;
   photoCount: number;
+  photoPaths?: string[];  // 照片URL数组（用于预览）
   configuredTexts?: string[];  // 已配置的文字粒子内容
   textSwitchInterval?: number; // 文字切换间隔（秒）
   onTextsChange?: (texts: string[]) => void; // 修改文字内容
@@ -286,6 +477,7 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
   config,
   onChange,
   photoCount,
+  photoPaths = [],
   configuredTexts = [],
   textSwitchInterval: _textSwitchInterval = 3,
   onTextsChange,
@@ -416,11 +608,11 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
             <select
               value={safeConfig.music || ''}
               onChange={e => updateConfig({ music: e.target.value || undefined })}
-              style={inputStyle}
+              style={{ ...inputStyle, backgroundColor: '#1a1a1a', color: '#fff' }}
             >
-              <option value="">使用全局音乐设置</option>
+              <option value="" style={{ backgroundColor: '#1a1a1a', color: '#fff' }}>使用全局音乐设置</option>
               {PRESET_MUSIC.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
+                <option key={m.id} value={m.id} style={{ backgroundColor: '#1a1a1a', color: '#fff' }}>{m.name}</option>
               ))}
             </select>
             <p style={{ fontSize: '9px', color: '#666', margin: '4px 0 0 0' }}>
@@ -587,19 +779,12 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                       )}
 
                       {step.type === 'photo' && (
-                        <div>
-                          <label style={{ fontSize: '10px', color: '#888' }}>选择照片</label>
-                          <select
-                            value={step.photoIndex}
-                            onChange={e => updateStep(step.id, { photoIndex: Number(e.target.value) })}
-                            style={{ ...inputStyle, marginTop: '4px' }}
-                          >
-                            <option value={-1}>按顺序自动选择</option>
-                            {Array.from({ length: photoCount }, (_, i) => (
-                              <option key={i} value={i}>照片 {i + 1}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <PhotoSelector
+                          photoIndex={step.photoIndex}
+                          photoCount={photoCount}
+                          photoPaths={photoPaths}
+                          onChange={(index) => updateStep(step.id, { photoIndex: index })}
+                        />
                       )}
 
                       {step.type === 'heart' && (
@@ -614,19 +799,12 @@ export const TimelineEditor: React.FC<TimelineEditorProps> = ({
                             在爱心中心显示照片
                           </label>
                           {step.showPhoto && (
-                            <div>
-                              <label style={{ fontSize: '10px', color: '#888' }}>选择照片</label>
-                              <select
-                                value={step.photoIndex ?? -1}
-                                onChange={e => updateStep(step.id, { photoIndex: Number(e.target.value) })}
-                                style={{ ...inputStyle, marginTop: '4px' }}
-                              >
-                                <option value={-1}>按顺序自动选择</option>
-                                {Array.from({ length: photoCount }, (_, i) => (
-                                  <option key={i} value={i}>照片 {i + 1}</option>
-                                ))}
-                              </select>
-                            </div>
+                            <PhotoSelector
+                              photoIndex={step.photoIndex ?? -1}
+                              photoCount={photoCount}
+                              photoPaths={photoPaths}
+                              onChange={(index) => updateStep(step.id, { photoIndex: index })}
+                            />
                           )}
                         </>
                       )}
