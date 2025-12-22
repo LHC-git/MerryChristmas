@@ -1,6 +1,6 @@
-import { useRef, Suspense } from 'react';
+import { useRef, Suspense, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Stars, Sparkles } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Stars, Sparkles, useProgress } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { CONFIG, DEFAULT_BELL_CONFIG, DEFAULT_SHOOTING_STARS_CONFIG, DEFAULT_AURORA_CONFIG, DEFAULT_FIREWORKS_CONFIG } from '../config';
@@ -58,6 +58,7 @@ interface ExperienceProps {
   isGiftWaiting?: boolean;
   isGiftOpen?: boolean;
   onGiftOpen?: () => void;
+  onAssetsLoaded?: () => void; // 场景资源加载完成回调
 }
 
 export const Experience = ({
@@ -85,14 +86,37 @@ export const Experience = ({
   giftBoxConfig,
   isGiftWaiting = false,
   isGiftOpen = false,
-  onGiftOpen
+  onGiftOpen,
+  onAssetsLoaded
 }: ExperienceProps) => {
   const controlsRef = useRef<any>(null);
+  const { active, total } = useProgress();
+  const assetsReadyRef = useRef(false);
   const mobile = isMobile();
   const prevSceneStateRef = useRef<SceneState>(sceneState);
   // 记录上一帧的相机角度，用于检测视角移动
   const lastAzimuthRef = useRef<number>(0);
   const lastPolarRef = useRef<number>(0);
+  // 资源加载完成标记
+  const notifyAssetsReady = useRef(() => {
+    if (!assetsReadyRef.current) {
+      assetsReadyRef.current = true;
+      onAssetsLoaded?.();
+    }
+  }).current;
+
+  useEffect(() => {
+    // 无资源或所有资源加载完成都会触发
+    if (!active) {
+      notifyAssetsReady();
+    }
+  }, [active, total, notifyAssetsReady]);
+
+  useEffect(() => {
+    // 安全兜底：若 useProgress 未触发，3 秒后强制通知
+    const timer = setTimeout(() => notifyAssetsReady(), 3000);
+    return () => clearTimeout(timer);
+  }, [notifyAssetsReady]);
 
   // 确保 config 有新字段的默认值
   const safeConfig = {
@@ -173,9 +197,13 @@ export const Experience = ({
       // zoomDelta > 0 表示手张开 -> 放大（相机靠近，距离减小）
       // zoomDelta < 0 表示手收缩 -> 缩小（相机远离，距离增大）
       if (zoomDelta && Math.abs(zoomDelta) > 0.1) {
+        const clampedZoom = Math.max(-30, Math.min(30, zoomDelta));
         const currentDistance = controlsRef.current.getDistance();
         // 反转方向：zoomDelta正值时距离减小（放大）
-        const newDistance = Math.max(25, Math.min(100, currentDistance - zoomDelta * 1.5));
+        const newDistance = Math.max(
+          25,
+          Math.min(100, currentDistance - clampedZoom * 1.2)
+        );
         // 通过调整相机位置实现缩放
         const direction = controlsRef.current.object.position.clone().normalize();
         controlsRef.current.object.position.copy(direction.multiplyScalar(newDistance));
@@ -462,3 +490,4 @@ export const Experience = ({
     </>
   );
 };
+

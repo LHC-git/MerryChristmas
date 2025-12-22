@@ -542,7 +542,7 @@ export default function GrandTreeApp() {
       // 已选中照片时，捏合取消选择
       setSelectedPhotoIndex(null);
     } else {
-      // 未选中时，直接选择最近的照片（不限制距离）
+      // 未选中时，选择最近的照片，并设置距离阈值避免误选
       let closestIndex = -1;
       let closestDist = Infinity;
 
@@ -558,17 +558,17 @@ export default function GrandTreeApp() {
         }
       });
 
-      // 只要找到照片就选中（移除距离限制）
-      if (closestIndex >= 0) {
+      // 仅在距离足够近时选中，避免远距离抖动误触
+      if (closestIndex >= 0 && closestDist < 0.18) {
         setSelectedPhotoIndex(closestIndex);
-        // 启动 1.5 秒锁定期
+        // 启动短锁定期，减少重复触发但保持流畅
         setPhotoLocked(true);
         if (photoLockTimerRef.current) {
           clearTimeout(photoLockTimerRef.current);
         }
         photoLockTimerRef.current = setTimeout(() => {
           setPhotoLocked(false);
-        }, 1500);
+        }, 900);
       }
     }
   }, [selectedPhotoIndex, showHeart, photoLocked]);

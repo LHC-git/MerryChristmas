@@ -47,8 +47,10 @@ export default function SharePage({ shareId }: SharePageProps) {
   const [loading, setLoading] = useState(true);
   const [loadingStage, setLoadingStage] = useState<string>('正在连接服务器...');
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [assetsReady, setAssetsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shareData, setShareData] = useState<ShareData | null>(null);
+  const assetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 场景状态
   const [sceneState, setSceneState] = useState<SceneState>('FORMED');
@@ -169,6 +171,7 @@ export default function SharePage({ shareId }: SharePageProps) {
       setLoading(true);
       setLoadingProgress(0);
       setLoadingStage('正在连接服务器...');
+      setAssetsReady(false);
       
       // 模拟网络延迟的进度
       const progressTimer = setInterval(() => {
@@ -240,17 +243,31 @@ export default function SharePage({ shareId }: SharePageProps) {
         }
       }
       
-      setLoadingProgress(100);
-      setLoadingStage('加载完成！');
-      
-      // 短暂延迟后隐藏加载界面
-      setTimeout(() => {
-        setLoading(false);
-      }, 300);
+      setLoadingProgress(90);
+      setLoadingStage('等待场景资源加载...');
+      // 启动兜底计时器，防止 onAssetsLoaded 未回调导致卡死
+      if (assetTimeoutRef.current) clearTimeout(assetTimeoutRef.current);
+      assetTimeoutRef.current = setTimeout(() => {
+        setAssetsReady(true);
+      }, 5000);
     };
     
     loadShare();
+    return () => {
+      if (assetTimeoutRef.current) clearTimeout(assetTimeoutRef.current);
+    };
   }, [shareId]);
+
+  // 场景资源加载完成后再结束加载遮罩，避免装饰迟延出现
+  useEffect(() => {
+    if (!loading) return;
+    if (assetsReady) {
+      setLoadingProgress(100);
+      setLoadingStage('加载完成！');
+      const timer = setTimeout(() => setLoading(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [assetsReady, loading]);
 
   // 预加载文字效果的定时器
   useEffect(() => {
@@ -866,6 +883,7 @@ export default function SharePage({ shareId }: SharePageProps) {
             isGiftWaiting={timeline.isGiftWaiting}
             isGiftOpen={timeline.isGiftOpen}
             onGiftOpen={timeline.onGiftOpen}
+            onAssetsLoaded={() => setAssetsReady(true)}
           />
         </Canvas>
       </div>

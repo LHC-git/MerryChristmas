@@ -2,6 +2,11 @@ import { useRef, useEffect, useCallback } from 'react';
 import { FilesetResolver, GestureRecognizer, DrawingUtils } from '@mediapipe/tasks-vision';
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision';
 
+// 缩放控制参数，防止抖动导致的误触发
+const ZOOM_SPEED_MIN = 0.006; // 速度低于该值视为抖动
+const ZOOM_SPEED_MAX = 0.06; // 速度高于该值视为异常跳变
+const ZOOM_DELTA_CLAMP = 25; // 单次缩放的最大幅度
+
 // 手势类型
 type GestureName =
   | 'None'
@@ -396,19 +401,32 @@ export const GestureController = ({
             // 手掌张开（scale变大）-> 放大（zoom负值让相机靠近）
             // 手掌收缩（scale变小）-> 缩小（zoom正值让相机远离）
             if (isFiveFingers && isStable && detectedGesture === 'Open_Palm') {
-              const currentScale = Math.hypot(
+            const rawScale = Math.hypot(
                 wrist.x - landmarks[9].x,
                 wrist.y - landmarks[9].y
               );
+            // 使用平滑后的尺度，抑制噪声
+            const currentScale =
+              lastHandScaleRef.current === null
+                ? rawScale
+                : lastHandScaleRef.current * 0.7 + rawScale * 0.3;
               if (lastHandScaleRef.current !== null) {
                 const deltaScale = currentScale - lastHandScaleRef.current;
                 const speed = Math.abs(deltaScale);
                 // 提高阈值，避免抖动
-                if (speed > 0.003 && speed < 0.1 && callbacksRef.current.onZoom) {
+              if (
+                speed > ZOOM_SPEED_MIN &&
+                speed < ZOOM_SPEED_MAX &&
+                callbacksRef.current.onZoom
+              ) {
                   // 反转方向：手张开放大，手收缩缩小
-                  const amplifiedDelta =
-                    Math.sign(deltaScale) * speed * (1 + speed * 50);
-                  callbacksRef.current.onZoom(amplifiedDelta * 300);
+                const amplifiedDelta =
+                  Math.sign(deltaScale) * speed * (1 + speed * 30);
+                const zoomStep = Math.max(
+                  -ZOOM_DELTA_CLAMP,
+                  Math.min(ZOOM_DELTA_CLAMP, amplifiedDelta * 120)
+                );
+                callbacksRef.current.onZoom(zoomStep);
                 }
               }
               lastHandScaleRef.current = currentScale;
@@ -460,7 +478,8 @@ export const GestureController = ({
               detectedGesture === 'Pinch' &&
               pinchCooldownRef.current <= 0
             ) {
-              pinchCooldownRef.current = 0.8;
+              // 加快响应，但仍保留冷却防止连续触发抖动
+              pinchCooldownRef.current = 0.5;
               const thumbTip = landmarks[4];
               const indexTip = landmarks[8];
               callbacksRef.current.onPinch?.({

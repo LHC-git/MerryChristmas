@@ -175,13 +175,35 @@ export const sanitizeShareConfig = (config: unknown): Record<string, unknown> =>
         cylinder: sanitizeBoolean(t.cylinder, true)
       };
     }
+    // 装饰样式配置
+    if (e.styleConfig && typeof e.styleConfig === 'object') {
+      const sc = e.styleConfig as Record<string, unknown>;
+      const allowedStyles = ['classic', 'crystal', 'gem', 'nature', 'modern'];
+      const allowedMaterials = ['standard', 'glass', 'metallic', 'emissive'];
+      elements.styleConfig = {
+        style: typeof sc.style === 'string' && allowedStyles.includes(sc.style) ? sc.style : 'classic',
+        material: typeof sc.material === 'string' && allowedMaterials.includes(sc.material) ? sc.material : 'standard',
+        transparency: sanitizeNumber(sc.transparency, 0, 0.8, 0),
+        metalness: sanitizeNumber(sc.metalness, 0, 1, 0.4),
+        roughness: sanitizeNumber(sc.roughness, 0, 1, 0.3),
+        emissiveIntensity: sanitizeNumber(sc.emissiveIntensity, 0, 2, 0.2)
+      };
+    }
     // 闪烁配置
     if (e.twinkle && typeof e.twinkle === 'object') {
       const tw = e.twinkle as Record<string, unknown>;
-      elements.twinkle = {
+      const twinkle: Record<string, unknown> = {
         enabled: sanitizeBoolean(tw.enabled, true),
         speed: sanitizeNumber(tw.speed, 0.5, 3, 1)
       };
+      // 闪烁颜色配置
+      if (typeof tw.flashColor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(tw.flashColor)) {
+        twinkle.flashColor = tw.flashColor;
+      }
+      if (typeof tw.baseColor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(tw.baseColor)) {
+        twinkle.baseColor = tw.baseColor;
+      }
+      elements.twinkle = twinkle;
     }
     // 自定义图片需要验证
     if (e.customImages && typeof e.customImages === 'object') {

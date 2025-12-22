@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { SceneConfig, GestureConfig, GestureAction, MusicConfig, AnimationEasing, ScatterShape, GatherShape, DecorationColors, DecorationStyle, DecorationMaterial, DecorationStyleConfig } from '../../types';
+import type { SceneConfig, GestureConfig, GestureAction, MusicConfig, AnimationEasing, ScatterShape, GatherShape, DecorationColors, DecorationStyle, DecorationMaterial } from '../../types';
 import { PRESET_MUSIC } from '../../types';
 import { isMobile } from '../../utils/helpers';
 import { TITLE_FONTS } from './TitleOverlay';
