@@ -28,6 +28,17 @@ export interface ShareData {
   voiceUrls?: string[];  // 语音祝福音频 Base64 数据列表
 }
 
+const MAX_SHARE_SIZE_MB = 50;
+
+const getShareSizeMB = (data: ShareData): number => {
+  try {
+    const str = JSON.stringify(data);
+    return new Blob([str]).size / (1024 * 1024);
+  } catch {
+    return 0;
+  }
+};
+
 // 本地存储的分享信息
 interface LocalShareInfo {
   shareId: string;
@@ -139,6 +150,15 @@ export const uploadShare = async (
       voiceUrls: voiceUrls.length > 0 ? voiceUrls : undefined
     };
 
+    // 前端体积保护，避免超过后端限制
+    const sizeMB = getShareSizeMB(shareData);
+    if (sizeMB > MAX_SHARE_SIZE_MB) {
+      return {
+        success: false,
+        error: `分享数据过大（约 ${sizeMB.toFixed(1)} MB），请减少照片数量或压缩图片，控制在 ${MAX_SHARE_SIZE_MB}MB 内后重试。`
+      };
+    }
+
     // 上传到 R2（通过 Worker 代理）
     const response = await fetch(`${R2_API_URL}/shares/${shareId}.json`, {
       method: 'PUT',
@@ -207,6 +227,11 @@ export const updateShare = async (
       updatedAt: now,
       voiceUrls: voiceUrls.length > 0 ? voiceUrls : undefined
     };
+
+    const sizeMB = getShareSizeMB(updatedData);
+    if (sizeMB > MAX_SHARE_SIZE_MB) {
+      return { success: false, error: `分享数据过大（约 ${sizeMB.toFixed(1)} MB），请减少照片数量或压缩图片后再更新（上限 ${MAX_SHARE_SIZE_MB}MB）。` };
+    }
 
     const response = await fetch(`${R2_API_URL}/shares/${shareId}.json`, {
       method: 'PUT',

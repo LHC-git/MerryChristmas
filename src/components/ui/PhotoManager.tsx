@@ -2,7 +2,7 @@
  * 照片管理弹窗组件
  * 用于查看、新增、删除照片
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { fileToBase64 } from '../../utils/helpers';
 
@@ -23,17 +23,54 @@ export const PhotoManager: React.FC<PhotoManagerProps> = ({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sizeError, setSizeError] = useState<string | null>(null);
+
+  const MAX_PHOTO_MB = 50;
+
+  // 估算 base64 图片大小（MB）
+  const estimateBase64SizeMB = (base64: string): number => {
+    if (!base64) return 0;
+    const commaIndex = base64.indexOf(',');
+    const data = commaIndex >= 0 ? base64.slice(commaIndex + 1) : base64;
+    const padding = (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0);
+    const bytes = (data.length * 3) / 4 - padding;
+    return bytes / (1024 * 1024);
+  };
+
+  const photoSizesMB = useMemo(
+    () => photos.map(p => estimateBase64SizeMB(p)),
+    [photos]
+  );
+
+  const totalSizeMB = useMemo(
+    () => photoSizesMB.reduce((sum, v) => sum + v, 0),
+    [photoSizesMB]
+  );
+
+  const totalSizeLabel = `${totalSizeMB.toFixed(1)} MB / ${MAX_PHOTO_MB} MB`;
+  const sizeRatio = Math.min(1, totalSizeMB / MAX_PHOTO_MB);
 
   // 添加照片
   const handleAddPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
+    setSizeError(null);
+
+    // 先根据原始文件大小做预检查，避免超出 50MB
+    let currentSize = totalSizeMB;
     const newPhotos: string[] = [];
     for (let i = 0; i < files.length; i++) {
       try {
+        const file = files[i];
+        const fileSizeMB = file.size / (1024 * 1024);
+        if (currentSize + fileSizeMB > MAX_PHOTO_MB) {
+          setSizeError(`已达到 ${currentSize.toFixed(1)} MB，添加「${file.name}」会超过 ${MAX_PHOTO_MB} MB 限制，请删除部分照片或压缩后再试。`);
+          break;
+        }
         const base64 = await fileToBase64(files[i]);
         newPhotos.push(base64);
+        currentSize += fileSizeMB;
       } catch (err) {
         console.error('Failed to load photo:', err);
       }
@@ -120,10 +157,11 @@ export const PhotoManager: React.FC<PhotoManagerProps> = ({
             borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            gap: '8px'
           }}
         >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '18px' }}>🖼️</span>
             <span style={{ color: '#fff', fontSize: '16px', fontWeight: 500 }}>
               照片管理
@@ -138,6 +176,17 @@ export const PhotoManager: React.FC<PhotoManagerProps> = ({
               }}
             >
               {photos.length} 张
+            </span>
+            <span
+              style={{
+                background: 'rgba(0, 0, 0, 0.4)',
+                color: sizeRatio >= 0.9 ? '#ff7777' : '#9EFFE0',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                fontSize: '11px'
+              }}
+            >
+              共 {totalSizeLabel}
             </span>
           </div>
           <button
@@ -241,8 +290,11 @@ export const PhotoManager: React.FC<PhotoManagerProps> = ({
                     >
                       照片 {index + 1}
                     </div>
-                    <div style={{ color: '#888', fontSize: '11px' }}>
-                      故事线中显示为「照片 {index + 1}」
+                    <div style={{ color: '#888', fontSize: '11px', display: 'flex', justifyContent: 'space-between', gap: '6px' }}>
+                      <span>故事线中显示为「照片 {index + 1}」</span>
+                      <span style={{ color: '#9EFFE0' }}>
+                        ~{photoSizesMB[index].toFixed(2)} MB
+                      </span>
                     </div>
                   </div>
 
@@ -342,8 +394,20 @@ export const PhotoManager: React.FC<PhotoManagerProps> = ({
               textAlign: 'center'
             }}
           >
-            支持拖拽排序 · 照片顺序对应故事线中的「照片 1」「照片 2」...
+            支持拖拽排序 · 照片顺序对应故事线中的「照片 1」「照片 2」... · 总大小上限 {MAX_PHOTO_MB} MB
           </p>
+          {sizeError && (
+            <p
+              style={{
+                margin: '6px 0 0',
+                fontSize: '11px',
+                color: '#ff7777',
+                textAlign: 'center'
+              }}
+            >
+              {sizeError}
+            </p>
+          )}
         </div>
       </div>
 
