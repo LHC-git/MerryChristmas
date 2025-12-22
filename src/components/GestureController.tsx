@@ -55,6 +55,7 @@ export const GestureController = ({
     count: 0,
   });
   const pinchCooldownRef = useRef<number>(0);
+  const pinchActiveRef = useRef<boolean>(false); // 追踪捏合按下状态，防止长按重复触发
   const lastFrameTimeRef = useRef<number>(0);
 
   // 旋转加速度（物理模拟）
@@ -346,6 +347,10 @@ export const GestureController = ({
             detectedGesture = 'Pinch';
             gestureScore = 0.85;
           }
+          // 捏合抬起时重置状态，允许下一次触发
+          if (!pinch) {
+            pinchActiveRef.current = false;
+          }
 
           // 手势稳定性检测
           if (detectedGesture !== 'None') {
@@ -476,10 +481,12 @@ export const GestureController = ({
             // 捏合手势
             if (
               detectedGesture === 'Pinch' &&
-              pinchCooldownRef.current <= 0
+              pinchCooldownRef.current <= 0 &&
+              !pinchActiveRef.current
             ) {
               // 加快响应，但仍保留冷却防止连续触发抖动
               pinchCooldownRef.current = 0.5;
+              pinchActiveRef.current = true;
               const thumbTip = landmarks[4];
               const indexTip = landmarks[8];
               callbacksRef.current.onPinch?.({
