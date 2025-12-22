@@ -1240,7 +1240,13 @@ export default function GrandTreeApp() {
         <AvatarCropper
           imageUrl={avatarToCrop}
           onConfirm={(croppedImage) => {
-            setSceneConfig(prev => ({ ...prev, topStar: { avatarUrl: croppedImage } }));
+            setSceneConfig(prev => ({ 
+              ...prev, 
+              topStar: { 
+                ...prev.topStar, 
+                avatarUrl: croppedImage 
+              } 
+            }));
             setAvatarToCrop(null);
           }}
           onCancel={() => setAvatarToCrop(null)}

@@ -10,17 +10,21 @@ interface TopStarProps {
   state: SceneState;
   avatarUrl?: string;
   treeHeight?: number;
+  size?: number; // 星星大小倍数（默认1.0）
 }
 
-export const TopStar = ({ state, avatarUrl, treeHeight }: TopStarProps) => {
+export const TopStar = ({ state, avatarUrl, treeHeight, size = 1.0 }: TopStarProps) => {
   const actualHeight = treeHeight ?? CONFIG.tree.height;
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const pointLightRef = useRef<THREE.PointLight>(null);
   const [avatarTexture, setAvatarTexture] = useState<THREE.Texture | null>(null);
 
-  const outerRadius = 1.3;
-  const innerRadius = 0.7;
+  // 使用配置的大小倍数
+  const baseOuterRadius = 1.3;
+  const baseInnerRadius = 0.7;
+  const outerRadius = baseOuterRadius * size;
+  const innerRadius = baseInnerRadius * size;
 
   // 加载头像纹理
   useEffect(() => {
@@ -126,8 +130,15 @@ export const TopStar = ({ state, avatarUrl, treeHeight }: TopStarProps) => {
 
   const hasAvatar = !!avatarTexture;
 
+  // 根据星星大小动态调整Y位置，确保星星不会插进树里
+  // 基础偏移1.8，加上星星半径的变化量（size - 1.0）* baseOuterRadius
+  // 当size变大时，星星往上移动，避免底部插进树顶
+  const baseOffset = 1.8;
+  const sizeAdjustment = (size - 1.0) * baseOuterRadius;
+  const yPosition = actualHeight / 2 + baseOffset + sizeAdjustment;
+
   return (
-    <group ref={groupRef} position={[0, actualHeight / 2 + 1.8, 0]}>
+    <group ref={groupRef} position={[0, yPosition, 0]}>
       <Float speed={2} rotationIntensity={0.2} floatIntensity={0.2}>
         {/* 金色立体星星（始终显示作为边框） */}
         <mesh geometry={starGeometry}>

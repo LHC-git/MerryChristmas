@@ -289,7 +289,7 @@ export interface SceneConfig {
   shootingStars?: ShootingStarsConfig; // 流星效果
   aurora?: AuroraConfig;              // 极光背景
   fireworks?: FireworksConfig;        // 烟花效果
-  topStar?: { avatarUrl?: string };  // 树顶星星头像
+  topStar?: { avatarUrl?: string; size?: number };  // 树顶星星头像和大小（默认1.0）
   intro?: {                // 开场文案配置
     enabled: boolean;
     text: string;          // 主文案

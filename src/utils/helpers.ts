@@ -513,6 +513,7 @@ export const getDefaultSceneConfig = (forceMinimal = false): Record<string, unkn
       heartCount: useMinimal ? 800 : 1500
     },
     cameraSensitivity: 25, // 默认灵敏度
-    zoomSpeed: 100 // 默认放大缩小速度
+    zoomSpeed: 100, // 默认放大缩小速度
+    topStar: { size: 1.0 } // 树顶星星默认大小（倍数）
   };
 };

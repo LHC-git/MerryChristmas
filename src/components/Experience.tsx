@@ -470,7 +470,12 @@ export const Experience = ({
                 treeRadius={config.treeShape?.radius}
               />
             )}
-            <TopStar state={sceneState} avatarUrl={config.topStar?.avatarUrl} treeHeight={config.treeShape?.height} />
+            <TopStar 
+              state={sceneState} 
+              avatarUrl={config.topStar?.avatarUrl} 
+              treeHeight={config.treeShape?.height}
+              size={config.topStar?.size || 1.0}
+            />
           </Suspense>
           {safeConfig.sparkles.enabled && (
             <Sparkles count={safeConfig.sparkles.count} scale={50} size={8} speed={0.4} opacity={0.4} color={CONFIG.colors.silver} />

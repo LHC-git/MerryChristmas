@@ -520,6 +520,11 @@ export const sanitizeShareConfig = (config: unknown): Record<string, unknown> =>
       const avatarImg = sanitizeBase64Image(ts.avatarUrl);
       if (avatarImg) topStar.avatarUrl = avatarImg;
     }
+    // 验证并添加大小配置
+    if (ts.size !== undefined) {
+      topStar.size = sanitizeNumber(ts.size, 0.3, 3.0, 1.0);
+    }
+    // 如果有任何配置项，就添加 topStar
     if (Object.keys(topStar).length > 0) {
       sanitized.topStar = topStar;
     }

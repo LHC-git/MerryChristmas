@@ -2386,6 +2386,28 @@ export const SettingsPanel = ({
             </p>
           </div>
         )}
+        
+        <div style={{ ...labelStyle, marginTop: '12px' }}>
+          <span>星星大小: {(config.topStar?.size || 1.0).toFixed(1)}</span>
+        </div>
+        <input
+          type="range"
+          min="0.3"
+          max="3.0"
+          step="0.1"
+          value={config.topStar?.size || 1.0}
+          onChange={e => onChange({ 
+            ...config, 
+            topStar: { 
+              ...config.topStar, 
+              size: Number(e.target.value) 
+            } 
+          })}
+          style={sliderStyle}
+        />
+        <p style={{ fontSize: '9px', color: '#666', margin: '4px 0 0 0' }}>
+          调节树顶星星的大小（0.3-3.0倍）
+        </p>
       </CollapsibleSection>
 
       {/* Bloom 效果 */}
