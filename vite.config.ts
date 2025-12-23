@@ -8,7 +8,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/MerryChristmas/', // GitHub Pages 部署路径
+  base: process.env.NODE_ENV === 'production' ? '/MerryChristmas/' : '/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
