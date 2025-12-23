@@ -78,4 +78,4 @@ export const DEFAULT_FIREWORKS_CONFIG: FireworksConfig = {
 };
 
 // 圣诞音乐 URL - 使用相对路径以支持不同的 base path
-export const CHRISTMAS_MUSIC_URL = new URL('/music/任性.mp3', import.meta.env.BASE_URL).href;
+export const CHRISTMAS_MUSIC_URL = `${import.meta.env.BASE_URL}music/任性.mp3`;
