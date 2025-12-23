@@ -1000,6 +1000,31 @@ export default function GrandTreeApp() {
         if (savedPhotos.length > 0) {
           console.log(`📦 从 localStorage 读取到 ${savedPhotos.length} 张照片`);
           setUploadedPhotos(savedPhotos);
+        } else {
+          // 如果本地存储也没有，加载默认照片（public/photos目录）
+          console.log('📷 加载默认照片...');
+          const defaultPhotos: string[] = [];
+          // 尝试加载 1.jpg 到 13.jpg
+          for (let i = 1; i <= 13; i++) {
+            try {
+              const response = await fetch(`/MerryChristmas/photos/${i}.jpg`);
+              if (response.ok) {
+                const blob = await response.blob();
+                const reader = new FileReader();
+                const base64 = await new Promise<string>((resolve) => {
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.readAsDataURL(blob);
+                });
+                defaultPhotos.push(base64);
+              }
+            } catch (err) {
+              console.log(`照片 ${i}.jpg 不存在，跳过`);
+            }
+          }
+          if (defaultPhotos.length > 0) {
+            console.log(`✅ 加载了 ${defaultPhotos.length} 张默认照片`);
+            setUploadedPhotos(defaultPhotos);
+          }
         }
       }
       setConfigLoaded(true);

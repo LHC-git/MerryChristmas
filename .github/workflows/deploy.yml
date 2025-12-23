@@ -24,18 +24,28 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
       - name: Install dependencies
         run: npm install
 
-      - name: Copy AI model files
+      - name: Copy AI model files from node_modules
         run: |
+          echo "Copying MediaPipe AI model files..."
           mkdir -p public/wasm public/models
-          cp node_modules/@mediapipe/tasks-vision/wasm/* public/wasm/ || true
+          
+          # 复制 wasm 文件
+          if [ -d "node_modules/@mediapipe/tasks-vision/wasm" ]; then
+            cp -v node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_internal.* public/wasm/ || echo "Warning: vision_wasm_internal files not found"
+            cp -v node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_nosimd_internal.* public/wasm/ || echo "Warning: vision_wasm_nosimd_internal files not found"
+          else
+            echo "Error: MediaPipe wasm directory not found"
+            exit 1
+          fi
+          
+          # 列出复制的文件
+          echo "Files in public/wasm:"
+          ls -lh public/wasm/
+          
+          echo "AI model files copied successfully!"
 
       - name: Build
         run: npm run build
