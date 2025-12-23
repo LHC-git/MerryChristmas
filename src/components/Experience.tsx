@@ -90,6 +90,8 @@ export const Experience = ({
   onGiftOpen,
   onAssetsLoaded
 }: ExperienceProps) => {
+  console.log('🎨 Experience 渲染 - photoPaths.length:', photoPaths.length);
+  
   const controlsRef = useRef<any>(null);
   const { active, total } = useProgress();
   const assetsReadyRef = useRef(false);

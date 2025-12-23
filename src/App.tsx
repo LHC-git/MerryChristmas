@@ -98,27 +98,14 @@ export default function GrandTreeApp() {
     setModalVisible(true);
   }, []);
 
-  // 教程状态 - 首次访问显示
-  const [showTutorial, setShowTutorial] = useState(() => {
-    try {
-      return !localStorage.getItem('welcome_tutorial_seen');
-    } catch {
-      return true;
-    }
-  });
+  // 教程状态 - 默认不显示
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // 隐私政策弹窗
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  // 快捷键帮助弹窗（仅电脑版，首次访问自动显示）
-  const [showKeyboardHelp, setShowKeyboardHelp] = useState(() => {
-    if (isMobile()) return false;
-    try {
-      return !localStorage.getItem('keyboard_help_seen');
-    } catch {
-      return true;
-    }
-  });
+  // 快捷键帮助弹窗 - 默认不显示
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
   // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -151,7 +138,7 @@ export default function GrandTreeApp() {
 
   // 默认音乐配置
   const defaultMusic: MusicConfig = {
-    selected: 'christmas-stars',
+    selected: 'ren-xing',
     volume: 0.5
   };
 
@@ -940,9 +927,48 @@ export default function GrandTreeApp() {
   // 加载本地保存的照片（配置已在 useState 初始化时加载）
   useEffect(() => {
     const loadPhotos = async () => {
-      const savedPhotos = await getLocalPhotos();
-      if (savedPhotos.length > 0) {
-        setUploadedPhotos(savedPhotos);
+      console.log('🔍 开始加载照片...');
+      const photoUrls: string[] = [];
+      // 尝试加载 1.jpg 到 13.jpg（直接从 public/photos 加载）
+      for (let i = 1; i <= 13; i++) {
+        try {
+          const response = await fetch(`/photos/${i}.jpg`);
+          console.log(`📷 尝试加载 ${i}.jpg - 状态: ${response.status}`);
+          if (response.ok) {
+            const blob = await response.blob();
+            console.log(`✅ ${i}.jpg 加载成功, 大小: ${blob.size} bytes`);
+            // 直接转换 blob 为 base64，跳过图片校验
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+            photoUrls.push(base64);
+            console.log(`✨ ${i}.jpg 转换成功`);
+          }
+        } catch (error) {
+          console.error(`❌ 照片 ${i}.jpg 加载失败:`, error);
+        }
+      }
+      
+      console.log(`📊 总共加载了 ${photoUrls.length} 张照片`);
+      if (photoUrls.length > 0) {
+        console.log(`✨ 设置照片到状态...`);
+        setUploadedPhotos(photoUrls);
+        // 强制保存到 localStorage
+        setTimeout(() => {
+          saveLocalPhotos(photoUrls);
+          console.log('💾 照片已保存到 localStorage');
+        }, 1000);
+      } else {
+        console.warn('⚠️ 没有加载到任何照片，尝试从本地存储读取...');
+        // 如果加载失败，尝试从本地存储读取
+        const savedPhotos = await getLocalPhotos();
+        if (savedPhotos.length > 0) {
+          console.log(`📦 从 localStorage 读取到 ${savedPhotos.length} 张照片`);
+          setUploadedPhotos(savedPhotos);
+        }
       }
       setConfigLoaded(true);
     };
@@ -955,6 +981,14 @@ export default function GrandTreeApp() {
       saveLocalConfig(sceneConfig as unknown as Record<string, unknown>);
     }
   }, [sceneConfig, configLoaded]);
+
+  // 监听照片数组变化
+  useEffect(() => {
+    console.log(`🖼️ uploadedPhotos 变化: 现在有 ${uploadedPhotos.length} 张照片`);
+    if (uploadedPhotos.length > 0) {
+      console.log('📸 照片预览:', uploadedPhotos.map((p, i) => `${i + 1}: ${p.substring(0, 50)}...`));
+    }
+  }, [uploadedPhotos]);
 
   // 照片变化时保存到本地
   useEffect(() => {

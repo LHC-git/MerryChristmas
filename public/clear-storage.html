@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清除本地数据</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .success {
+            color: #28a745;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎄 圣诞树数据清理工具</h1>
+        <p>点击下方按钮清除旧数据</p>
+        <button onclick="clearAllData()">清除所有本地数据</button>
+        <button onclick="goToHome()">返回主页</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function clearAllData() {
+            try {
+                // 清除 localStorage
+                localStorage.clear();
+                
+                // 清除 sessionStorage
+                sessionStorage.clear();
+                
+                // 清除 cookies
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ 清除成功！<br>请点击"返回主页"重新加载照片</div>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    '<div style="color: red;">❌ 清除失败：' + error.message + '</div>';
+            }
+        }
+
+        function goToHome() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
