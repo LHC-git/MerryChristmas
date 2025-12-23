@@ -8,7 +8,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './', // 使用相对路径，支持 Live Server 本地预览
+  base: '/MerryChristmas/', // GitHub Pages 部署路径
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
