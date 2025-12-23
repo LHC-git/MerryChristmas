@@ -31,3 +31,7 @@ dist-ssr
 # Cloudflare
 .wrangler
 .env*.local
+
+# Large binary files (auto-generated from node_modules)
+public/wasm/
+public/models/
