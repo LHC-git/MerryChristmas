@@ -8,13 +8,11 @@ import { THEME_PRESETS, type ThemeKey } from './config/themes';
 import { isMobile, isTablet, fileToBase64, getDefaultSceneConfig, toggleFullscreen, isFullscreen, isFullscreenSupported } from './utils/helpers';
 import { useTimeline } from './hooks/useTimeline';
 import { 
-  uploadShare, getLocalShare, getShareUrl, updateShare, getShare,
-  saveLocalConfig, getLocalConfig, saveLocalPhotos, getLocalPhotos,
-  refreshShareExpiry, deleteShare, clearLocalShare
+  saveLocalConfig, getLocalConfig, saveLocalPhotos, getLocalPhotos
 } from './lib/r2';
 import type { SceneState, SceneConfig, GestureConfig, GestureAction, MusicConfig } from './types';
 import { PRESET_MUSIC } from './types';
-import { Volume2, VolumeX, Camera, Settings, Wrench, Link, TreePine, Sparkles, Loader, HelpCircle, Shield, Heart, Type, Play, Maximize, Minimize, Keyboard } from 'lucide-react';
+import { Volume2, VolumeX, Maximize, Minimize } from 'lucide-react';
 
 // 深度合并配置对象
 function deepMergeConfig<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
@@ -56,7 +54,7 @@ export default function GrandTreeApp() {
   // 使用 ref 存储手掌移动值，避免频繁状态更新导致卡顿
   const palmMoveRef = useRef<{ x: number; y: number } | null>(null);
   const [aiStatus, setAiStatus] = useState("INITIALIZING...");
-  const [debugMode, setDebugMode] = useState(false);
+  const [debugMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPhotoManager, setShowPhotoManager] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(true);
@@ -681,24 +679,56 @@ export default function GrandTreeApp() {
     const musicUrl = getMusicUrl();
     const volume = sceneConfig.music?.volume ?? 0.5;
     
+    console.log('🎵 初始化音乐:', {
+      musicUrl,
+      volume,
+      selectedMusic: sceneConfig.music?.selected || defaultMusic.selected
+    });
+    
     audioRef.current = new Audio(musicUrl);
     audioRef.current.loop = true;
     audioRef.current.volume = volume;
 
+    // 添加错误监听
+    audioRef.current.addEventListener('error', (e) => {
+      console.error('❌ 音乐加载失败:', e);
+      console.error('音乐URL:', musicUrl);
+    });
+
+    // 添加加载成功监听
+    audioRef.current.addEventListener('canplay', () => {
+      console.log('✅ 音乐已加载完成，可以播放');
+    });
+
     const playAudio = () => {
-      audioRef.current?.play().catch(() => setMusicPlaying(false));
+      console.log('🎵 尝试播放音乐...');
+      audioRef.current?.play()
+        .then(() => {
+          console.log('✅ 音乐播放成功！');
+          setMusicPlaying(true);
+        })
+        .catch((error) => {
+          console.error('❌ 音乐自动播放失败:', error);
+          setMusicPlaying(false);
+        });
     };
     playAudio();
 
     const handleInteraction = () => {
       if (audioRef.current && audioRef.current.paused) {
-        audioRef.current.play().then(() => setMusicPlaying(true)).catch(() => {});
+        audioRef.current.play()
+          .then(() => {
+            setMusicPlaying(true);
+          })
+          .catch(() => {});
       }
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
     };
     document.addEventListener('click', handleInteraction);
     document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
 
     return () => {
       if (audioRef.current) {
@@ -844,14 +874,15 @@ export default function GrandTreeApp() {
   }, [demoMode, triggerEffect, toggleMusic, uploadedPhotos.length]);
 
   // 分享状态
-  const [isSharing, setIsSharing] = useState(false);
+  // const [isSharing] = useState(false);
   
   // 弹窗状态
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'alert' | 'confirm' | 'share' | 'error'>('alert');
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
-  const [modalShareUrl, setModalShareUrl] = useState('');
+  // const [modalShareUrl, setModalShareUrl] = useState('');
+  /*
   const [modalShareInfo, setModalShareInfo] = useState<{
     shareId: string;
     expiresAt: number;
@@ -860,6 +891,7 @@ export default function GrandTreeApp() {
     onDelete?: () => void;
     onRefresh?: () => void;
   } | undefined>(undefined);
+  */
 
 
   // 通用快捷键（非演示模式也可用，仅电脑版）
@@ -997,7 +1029,8 @@ export default function GrandTreeApp() {
     }
   }, [uploadedPhotos]);
 
-  // 分享功能
+  // 分享功能（已禁用）
+  /*
   const handleShare = useCallback(async () => {
     if (uploadedPhotos.length === 0) {
       showModal('error', '提示', '请先上传照片');
@@ -1127,6 +1160,10 @@ export default function GrandTreeApp() {
       setIsSharing(false);
     }
   }, [uploadedPhotos, sceneConfig, showModal]);
+  */
+
+  // 移除未使用的分享功能
+  // const handleShare = ...
 
   return (
     <div style={{ 
@@ -1342,78 +1379,10 @@ export default function GrandTreeApp() {
 
         {!isShareMode && (
           <>
-            <button onClick={() => setShowPhotoManager(true)} style={buttonStyle(false, mobile)}><Camera size={18} /></button>
-            <button onClick={() => setShowSettings(!showSettings)} style={buttonStyle(showSettings, mobile)}><Settings size={18} /></button>
-            <button onClick={() => setDebugMode(!debugMode)} style={buttonStyle(debugMode, mobile)} title="调试模式（显示摄像头）">
-              <Wrench size={18} />
-            </button>
-            <button onClick={handleShare} disabled={isSharing} style={buttonStyle(isSharing, mobile)}>
-              {isSharing ? <Loader size={18} className="spin" /> : <Link size={18} />}
-            </button>
-            <button onClick={() => setShowTutorial(true)} style={buttonStyle(false, mobile)} title="使用帮助">
-              <HelpCircle size={18} />
-            </button>
-            {!mobile && (
-              <button onClick={() => setShowKeyboardHelp(true)} style={buttonStyle(false, mobile)} title="快捷键 (?)">
-                <Keyboard size={18} />
-              </button>
-            )}
-            <button onClick={() => setShowPrivacy(true)} style={buttonStyle(false, mobile)} title="隐私政策">
-              <Shield size={18} />
-            </button>
           </>
         )}
 
-        <button
-          onClick={() => {
-            setSceneState(s => s === 'CHAOS' ? 'FORMED' : 'CHAOS');
-            // 切换时重置旋转速度，防止散开后依然高速旋转
-            rotationSpeedRef.current = 0;
-          }}
-          style={{ ...buttonStyle(false, mobile), padding: mobile ? '12px 24px' : '12px 30px', display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          {sceneState === 'CHAOS' ? <><TreePine size={18} /> 聚合</> : <><Sparkles size={18} /> 散开</>}
-        </button>
         
-        {/* 特效按钮 */}
-        <button
-          onClick={() => triggerEffect('heart')}
-          style={{ ...buttonStyle(showHeart, mobile), display: 'flex', alignItems: 'center', gap: '4px' }}
-          title="显示爱心"
-        >
-          <Heart size={18} />
-        </button>
-        <button
-          onClick={() => triggerEffect('text')}
-          style={{ ...buttonStyle(showText, mobile), display: 'flex', alignItems: 'center', gap: '4px' }}
-          title="显示文字"
-        >
-          <Type size={18} />
-        </button>
-        
-        {/* 时间轴播放按钮 */}
-        {sceneConfig.timeline?.enabled && sceneConfig.timeline.steps.length > 0 && (
-          <button
-            onClick={() => {
-              if (timeline.state.isPlaying) {
-                timeline.actions.stop();
-              } else {
-                timeline.actions.play();
-              }
-            }}
-            style={{ 
-              ...buttonStyle(timeline.state.isPlaying, mobile), 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px',
-              background: timeline.state.isPlaying ? '#E91E63' : 'rgba(0,0,0,0.7)',
-              borderColor: '#E91E63'
-            }}
-            title={timeline.state.isPlaying ? '停止故事线' : '播放故事线'}
-          >
-            <Play size={18} />
-          </button>
-        )}
       </div>
 
       {/* AI 状态 - 演示模式下隐藏 */}
@@ -1479,8 +1448,6 @@ export default function GrandTreeApp() {
         type={modalType}
         title={modalTitle}
         message={modalMessage}
-        shareUrl={modalShareUrl}
-        shareInfo={modalShareInfo}
         onClose={() => setModalVisible(false)}
         buttons={modalType === 'alert' || modalType === 'error' ? [
           { text: '确定', onClick: () => setModalVisible(false), primary: true }

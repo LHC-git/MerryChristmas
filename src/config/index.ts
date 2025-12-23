@@ -78,4 +78,4 @@ export const DEFAULT_FIREWORKS_CONFIG: FireworksConfig = {
 };
 
 // 圣诞音乐 URL
-export const CHRISTMAS_MUSIC_URL = '/music/mixkit-christmas-stars-866.mp3';
+export const CHRISTMAS_MUSIC_URL = '/music/任性.mp3';

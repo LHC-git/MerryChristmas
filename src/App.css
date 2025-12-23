@@ -12,3 +12,15 @@ body, html {
   width: 100vw;
   height: 100vh;
 }
+
+/* 音乐提示脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 0 12px 48px rgba(255, 215, 0, 0.6);
+  }
+}
