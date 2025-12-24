@@ -961,10 +961,11 @@ export default function GrandTreeApp() {
     const loadPhotos = async () => {
       console.log('🔍 开始加载照片...');
       const photoUrls: string[] = [];
+      const basePath = import.meta.env.BASE_URL;
       // 尝试加载 1.jpg 到 13.jpg（直接从 public/photos 加载）
       for (let i = 1; i <= 13; i++) {
         try {
-          const response = await fetch(`/photos/${i}.jpg`);
+          const response = await fetch(`${basePath}photos/${i}.jpg`);
           console.log(`📷 尝试加载 ${i}.jpg - 状态: ${response.status}`);
           if (response.ok) {
             const blob = await response.blob();
@@ -1004,10 +1005,11 @@ export default function GrandTreeApp() {
           // 如果本地存储也没有，加载默认照片（public/photos目录）
           console.log('📷 加载默认照片...');
           const defaultPhotos: string[] = [];
+          const basePath = import.meta.env.BASE_URL;
           // 尝试加载 1.jpg 到 13.jpg
           for (let i = 1; i <= 13; i++) {
             try {
-              const response = await fetch(`/MerryChristmas/photos/${i}.jpg`);
+              const response = await fetch(`${basePath}photos/${i}.jpg`);
               if (response.ok) {
                 const blob = await response.blob();
                 const reader = new FileReader();

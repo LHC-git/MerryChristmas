@@ -171,9 +171,10 @@ export const GestureController = ({
             'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm'
           );
           
+          const basePath = import.meta.env.BASE_URL;
           return await HandLandmarker.createFromOptions(vision, {
             baseOptions: {
-              modelAssetPath: '/models/hand_landmarker.task',
+              modelAssetPath: `${basePath}models/hand_landmarker.task`,
               delegate: 'GPU',
             },
             runningMode: 'VIDEO',

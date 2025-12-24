@@ -41,9 +41,17 @@ jobs:
             exit 1
           fi
           
+          # 复制手势识别模型文件
+          if [ -d "node_modules/@mediapipe/tasks-vision" ]; then
+            cp -v node_modules/@mediapipe/tasks-vision/wasm/hand_landmarker.task public/models/ || echo "Warning: hand_landmarker.task not found"
+            cp -v node_modules/@mediapipe/tasks-vision/wasm/gesture_recognizer.task public/models/ || echo "Warning: gesture_recognizer.task not found"
+          fi
+          
           # 列出复制的文件
           echo "Files in public/wasm:"
           ls -lh public/wasm/
+          echo "Files in public/models:"
+          ls -lh public/models/
           
           echo "AI model files copied successfully!"
 
