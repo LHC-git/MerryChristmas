@@ -126,7 +126,7 @@ export default function GrandTreeApp() {
   const defaultGestures: GestureConfig = {
     Closed_Fist: 'formed',
     Open_Palm: 'chaos',
-    Pointing_Up: 'music',
+    Pointing_Up: 'none',  // 禁用此手势，避免误操作
     Thumb_Down: 'zoomOut',
     Thumb_Up: 'zoomIn',
     Victory: 'text',
