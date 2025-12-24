@@ -32,6 +32,6 @@ dist-ssr
 .wrangler
 .env*.local
 
-# Large binary files (auto-generated from node_modules)
+# Large binary files - wasm files are auto-generated from node_modules
+# Model files (*.task) are committed to the repo for deployment
 public/wasm/
-public/models/

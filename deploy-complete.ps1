@@ -1,4 +1,4 @@
-# 完整部署脚本 - 包含照片和手势功能
+git push origin main# 完整部署脚本 - 包含照片和手势功能
 # 使用方法：.\deploy-complete.ps1
 
 Write-Host "🎄 Christmas Tree Ultra - 完整部署脚本" -ForegroundColor Green

@@ -29,10 +29,10 @@ jobs:
 
       - name: Copy AI model files from node_modules
         run: |
-          echo "Copying MediaPipe AI model files..."
-          mkdir -p public/wasm public/models
+          echo "Copying MediaPipe wasm files from node_modules..."
+          mkdir -p public/wasm
           
-          # 复制 wasm 文件
+          # 复制 wasm 文件（从 node_modules）
           if [ -d "node_modules/@mediapipe/tasks-vision/wasm" ]; then
             cp -v node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_internal.* public/wasm/ || echo "Warning: vision_wasm_internal files not found"
             cp -v node_modules/@mediapipe/tasks-vision/wasm/vision_wasm_nosimd_internal.* public/wasm/ || echo "Warning: vision_wasm_nosimd_internal files not found"
@@ -41,19 +41,14 @@ jobs:
             exit 1
           fi
           
-          # 复制手势识别模型文件
-          if [ -d "node_modules/@mediapipe/tasks-vision" ]; then
-            cp -v node_modules/@mediapipe/tasks-vision/wasm/hand_landmarker.task public/models/ || echo "Warning: hand_landmarker.task not found"
-            cp -v node_modules/@mediapipe/tasks-vision/wasm/gesture_recognizer.task public/models/ || echo "Warning: gesture_recognizer.task not found"
-          fi
+          # 模型文件已经在 Git 仓库中（public/models/*.task），无需复制
+          echo "Checking model files in public/models:"
+          ls -lh public/models/ || echo "Warning: public/models directory not found"
           
-          # 列出复制的文件
           echo "Files in public/wasm:"
           ls -lh public/wasm/
-          echo "Files in public/models:"
-          ls -lh public/models/
           
-          echo "AI model files copied successfully!"
+          echo "AI files ready!"
 
       - name: Build
         run: npm run build
